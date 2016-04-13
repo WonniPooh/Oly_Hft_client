@@ -15,7 +15,7 @@
 #include <sys/msg.h>
 #include <inttypes.h>
 #include "WinpercCommander.h"
-#include "WsC1ientCommander.h"
+#include "WsClientCommander.h"
 #include "CurlOlymptradeActions.h"
 #include "ParseOlymptradeJSON.h"
 
@@ -45,7 +45,7 @@ typedef struct BET_RESPONSE
 size_t recieved_data_process(char *response_data, size_t size, size_t nmemb, void *user_func_args)
 {
   static int times_called = 0;
-  static WsC1ientCommander commander;
+  static WsClientCommander commander;
   static WinpercCommander  winperc_commander;
   static ParseOlymptradeJSON parse_data_even;
   static ParseOlymptradeJSON parse_data_odd;

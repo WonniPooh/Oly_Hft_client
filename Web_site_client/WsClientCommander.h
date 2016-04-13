@@ -36,7 +36,7 @@ namespace ws_namespace
   };
 }
 
-class WsC1ientCommander   
+class WsClientCommander   
 {
   private:
     int ws_queue_fd;
@@ -61,7 +61,7 @@ class WsC1ientCommander
 
   public:    
 
-    WsC1ientCommander();
+    WsClientCommander();
 
     void process_current_status(ParseOlymptradeJSON& current_parsed);
 };

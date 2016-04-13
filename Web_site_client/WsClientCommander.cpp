@@ -1,6 +1,6 @@
-#include "WsC1ientCommander.h"
+#include "WsClientCommander.h"
 
-void WsC1ientCommander::queue_get_access()
+void WsClientCommander::queue_get_access()
 { 
   key_t key; 
 
@@ -23,7 +23,7 @@ void WsC1ientCommander::queue_get_access()
   }
 }
 
-void WsC1ientCommander::send_message()
+void WsClientCommander::send_message()
 {
   if(msgsnd(ws_queue_fd, (ws_namespace::ws_msg_buf_t*) &connection_actions, sizeof(ws_namespace::ws_msg_buf_t) - sizeof(long), 0) < 0)
   {
@@ -34,7 +34,7 @@ void WsC1ientCommander::send_message()
     printf("Msg successfully sent\n");
 }
 
-void WsC1ientCommander::delete_queue()       //TODO::delete file or not
+void WsClientCommander::delete_queue()       //TODO::delete file or not
 {
    if(msgctl(ws_queue_fd, IPC_RMID, (struct msqid_ds*)NULL) < 0)
    {
@@ -43,7 +43,7 @@ void WsC1ientCommander::delete_queue()       //TODO::delete file or not
    }
 }
 
-void WsC1ientCommander::recieve_from_queue()
+void WsClientCommander::recieve_from_queue()
 {
   ws_namespace::PingResult ping_result;
 
@@ -51,7 +51,7 @@ void WsC1ientCommander::recieve_from_queue()
 
   if (rcv_result < 0)
   {
-    printf("WsC1ientCommander::recieve_ping_response::error recieving msg\n");
+    printf("WsClientCommander::recieve_ping_response::error recieving msg\n");
     perror("msgrcv");
   }
   else
@@ -67,20 +67,20 @@ void WsC1ientCommander::recieve_from_queue()
   }
 }
 
-void WsC1ientCommander::send_ping_msg()
+void WsClientCommander::send_ping_msg()
 {
   ws_namespace::PingConnection ping = {1, ws_namespace::recive_type};
 
   if(msgsnd(ws_queue_fd, (ws_namespace::PingConnection*) &ping, sizeof(ping) - sizeof(long), 0) < 0)
   {
-    printf("WsC1ientCommander::send_ping_msg:: Can\'t send message to queue\n");
+    printf("WsClientCommander::send_ping_msg:: Can\'t send message to queue\n");
     perror("msgsnd");
   }
   else
     printf("send_ping_msg:: Msg successfully sent\n");
 }
 
-WsC1ientCommander::WsC1ientCommander()
+WsClientCommander::WsClientCommander()
 {
   first_time_called = 1;
   prev = {};
@@ -100,7 +100,7 @@ WsC1ientCommander::WsC1ientCommander()
   queue_get_access();
 }
 
-void WsC1ientCommander::process_current_status(ParseOlymptradeJSON& current_parsed)
+void WsClientCommander::process_current_status(ParseOlymptradeJSON& current_parsed)
 {
   prev = current;
   current = current_parsed;
