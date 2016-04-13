@@ -1,5 +1,5 @@
 //TODO::investing.com signals handler
-//g++ a_olymptrade.cpp ParseOlymptradeJSON.cpp CurlOlymptradeActions.cpp json11/json11.cpp -std=c++11 -lcurl
+//g++ a_olymptrade.cpp ParseOlymptradeJSON.cpp WinpercCommander.cpp WsClientCommander.cpp CurlOlymptradeActions.cpp json11/json11.cpp -std=c++11 -lcurl
 
 #include <cstdio>
 #include <cstdlib>
