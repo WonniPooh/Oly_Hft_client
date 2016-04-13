@@ -56,6 +56,8 @@ void WsClientCommander::recieve_from_queue()
   }
   else
   {
+    printf("WsClientCommander::recieve_ping_response:: ping response recieved!\n");
+
     if (ping_result.ready_to_recieve == false)
      {
        connection_opened = 0;
@@ -129,7 +131,10 @@ void WsClientCommander::process_current_status(ParseOlymptradeJSON& current_pars
   }
   else
   {
-    recieve_from_queue();
+    if(!connection_opened)
+    {
+      recieve_from_queue();
+    }
 
     if(connection_opened)
     {
