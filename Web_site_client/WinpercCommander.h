@@ -9,7 +9,7 @@ namespace winperc_namespace
 {
   const int MAX_USERNAME_LENGTH = 200;
   const int ASSETS_AMOUNT = 18;
-  const int recive_mtype = 666;
+  const int recive_mtype = 500;
   const int status_changed_mtype = 2000;
   const int winperc_changed_mtype = 1000;
   const std::string status_queue_filename = "NEURO_ASSETS_STATUS";
@@ -22,7 +22,7 @@ namespace winperc_namespace
   {
     long mtype;
     int asset;
-    bool locked;
+    bool available;
   };
 
   struct ASSET_WINPERC
@@ -47,40 +47,51 @@ namespace winperc_namespace
 class WinpercCommander
 {
   private:
-    int connection_opened;
-    int first_time_availability_called;
-    int first_time_winperc_called;
-
     int asset_status_queue_fd;                    
-    int winperc_queue_fd[winperc_namespace::ASSETS_AMOUNT];
-    winperc_namespace::ASSET_AVAILABLE availability;            
-    winperc_namespace::ASSET_WINPERC win_percentage;
+    int status_update_needed_count;
+    int first_time_availability_called;
+    int status_ping_success[winperc_namespace::ASSETS_AMOUNT];
+    int status_update_needed[winperc_namespace::ASSETS_AMOUNT];
+    int asset_status[winperc_namespace::ASSETS_AMOUNT];
     std::string status_queue_file_pathname;
+      
+    int first_time_winperc_called;
+    int winperc_update_needed_count;
+    int winperc_queue_fd[winperc_namespace::ASSETS_AMOUNT];
+    int winperc_status_changed[winperc_namespace::ASSETS_AMOUNT];
+    int winperc_ping_success[winperc_namespace::ASSETS_AMOUNT];
+    int winperc_update_needed[winperc_namespace::ASSETS_AMOUNT];
+    int asset_winperc[winperc_namespace::ASSETS_AMOUNT];
     std::string asset_winperc_pathname_const;
-    ParseOlymptradeJSON prev;
+
     ParseOlymptradeJSON current;
-    AssetStatus prev_status;
     AssetStatus current_status;
 
-    void init_winperc_queue(int asset);
+    void init_winperc_queue();
 
-    void transmit_winperc_data(int asset);
-    
-    void delete_winperc_queue(int asset);
+    void send_winperc_ping_msg(int asset);
+
+    void recieve_winperc_ping_response(int asset);
+
+    void transmit_winperc_data();
+
+    void delete_winperc_queue();
 
     void open_status_queue();
 
     void transmit_availability();
-    
+
     void delete_status_queue();
 
-    void send_ping_msg();
+    void send_status_ping_msg(); 
 
-    void recieve_from_queue();
+    void recieve_status_ping_response(int asset);
 
   public:
 
     WinpercCommander();
+
+    ~WinpercCommander();
 
     void update(ParseOlymptradeJSON& current_parsed);
 };
