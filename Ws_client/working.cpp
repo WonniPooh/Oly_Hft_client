@@ -30,7 +30,7 @@ typedef struct MsgBufWsCreateNewConnection
   int action;
   int asset;
 } ws_msg_buf_t;
-     
+
 const std::string RECORDS_FILENAME = "/Creation_data";
 const int MAX_PROGRAMM_PATH_LEN = 500;
 const int ASSETS_AMOUNT = 20;                                   //txlib -> examples ldview -- graph algorithms doxygen help + dynamic array for using threads;
@@ -52,6 +52,21 @@ static void child_sighandler(int sig, siginfo_t* siginfo, void* data);
 
 int main(int argc, char **argv)
 {
+  struct PingConnection
+  {
+    long mtype;
+    int accept_msgtype;
+  };
+
+  struct PingResult
+  {
+    long mtype;
+    bool ready_to_recieve;
+  };
+
+  PingConnection ping = {};
+  PingResult ping_response = {};
+
   pid_t pid = 1;
   int records_amount = 0;
   pid_t processes_running[ASSETS_AMOUNT] = {};
@@ -89,10 +104,30 @@ int main(int argc, char **argv)
 
   main_sighandler(0, NULL, (void*)&msgid);
   set_main_sigint_handler();
-    
+   
+  if((msgrcv(msgid, (PingConnection*) &ping, sizeof(PingConnection) - sizeof(long), 0, 0)) < 0)
+  {
+    printf("Can\'t receive ping message from queue\n");
+    delete_queue(msgid);
+    exit(-1);
+  }
+
+  ping_response.ready_to_recieve = 1;
+  ping_response.mtype = ping.accept_msgtype;
+
+  printf("ping respponse type:: %d\n", ping.accept_msgtype);
+  
+  if(msgsnd(msgid, (PingResult*) &ping_response, sizeof(PingResult) - sizeof(long), 0) < 0)
+  {
+    printf("Can\'t send ping_response to queue\n");
+    perror("msgsnd");
+  }
+  else
+    printf("Ping msg successfully sent\n");  
+
   while(1)
   {   
-    if((msgrcv(msgid, (ws_msg_buf_t*) &recieved_cmd, sizeof(ws_msg_buf_t) - sizeof(long), 0, 0)) < 0)
+    if((msgrcv(msgid, (ws_msg_buf_t*) &recieved_cmd, sizeof(ws_msg_buf_t) - sizeof(long), ping.mtype, 0)) < 0)
     {
       printf("Can\'t receive message from queue\n");
       delete_queue(msgid);
