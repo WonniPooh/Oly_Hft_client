@@ -33,14 +33,14 @@ struct Record
 struct PingConnection
 {
   long mtype;
-  char asset_name[10];
+  std::uint16_t asset;
   int accept_msgtype;
 };
 
 struct PingSuccess
 {
   long mtype;
-  char asset_name[10];
+  std::uint16_t asset;
 };
 
 struct SendData
@@ -59,6 +59,7 @@ class OlymptradeWsClient
 
 		int authorized_context_close_flag;
 		int reconnection_attempt_num;
+    int current_asset_number;
 		int connection_flag;
 		std::string current_statistics_file_pathname;
     std::string* current_asset_name;

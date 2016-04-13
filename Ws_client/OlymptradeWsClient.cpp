@@ -111,17 +111,6 @@ void pthread_routine(void *tool_in, struct lws *wsi_pointer)
   
     lws_callback_on_writable(wsi_pointer);
   }
-
-  /*
-  while(1)
-  {    
-    fgets(server_request, MAX_SERVER_REQUEST_LEN, stdin);
-
-    websocket_write_back(wsi, server_request);
-  
-    lws_callback_on_writable(wsi);
-  }
-  */
 }
 
 void OlymptradeWsClient::open_queue_connection()
@@ -147,7 +136,7 @@ void OlymptradeWsClient::open_queue_connection()
   PingConnection ping = {};
   ping.mtype = 1;
   ping.accept_msgtype = getpid();
-  strncpy(ping.asset_name, current_asset_name -> c_str(), MAX_ASSET_NAME_LEN);
+  ping.asset = current_asset_number;
 
   if(msgsnd(queue_fd, (PingConnection*) &ping, sizeof(PingConnection) - sizeof(long), 0) < 0)
   {
@@ -181,7 +170,7 @@ void OlymptradeWsClient::transmit_data(uint64_t current_timestamp, double price_
     }
     else
     {
-      if(!strcmp(test_success.asset_name, current_asset_name -> c_str()))
+      if(test_success.asset == current_asset_number)
       {
         queue_connection_eastablished = 1;
       }
@@ -275,6 +264,7 @@ OlymptradeWsClient::OlymptradeWsClient()
 {
   queue_file_pathname = "/usr/tmp/";
   queue_connection_eastablished = 0;
+  current_asset_number = 0;
   queue_fd = 0;
   authorized_context_close_flag = 0;
   reconnection_attempt_num = 0;
@@ -285,6 +275,7 @@ OlymptradeWsClient::OlymptradeWsClient()
 
 int OlymptradeWsClient::run_client(std::string current_records_filename, int current_asset_num, std::string* asset_name)
 {
+  current_asset_number = current_asset_num;
   records_filename = current_records_filename;
   current_asset_name = asset_name;
   queue_file_pathname += *asset_name;
