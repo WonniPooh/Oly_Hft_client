@@ -82,7 +82,7 @@ size_t recieved_data_process(char *response_data, size_t size, size_t nmemb, voi
       if(found == std::string::npos)
       {
         times_called++;
-        // parse update data; compare status for each asset; if sth changed send it to the ws_client; send winperc and other stuff to corresponding neurons
+        
         if(times_called % 2)                                          //odd
         {
           parse_data_odd.parse_update_json(input.c_str());
