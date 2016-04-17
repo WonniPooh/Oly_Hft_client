@@ -233,6 +233,8 @@ void CurlOlymptradeActions::log_into_platform(std::string login, std::string pas
 
 void CurlOlymptradeActions::send_requests(std::vector<bet_properties_t>& bet_props) 
 { 
+  static int count = 0;
+
   if(!curl_bet_handle[0])
     init_bet_handle();     
 
@@ -242,7 +244,11 @@ void CurlOlymptradeActions::send_requests(std::vector<bet_properties_t>& bet_pro
   int handle_count = 0;
   int num_bet = bet_props.size();
 
-  multi_handle = curl_multi_init();
+  if(!count)
+  {
+    count++;
+    multi_handle = curl_multi_init();
+  }
 
   set_host_url(curl_status_handle, UPDATE_STATUS, NULL);
   curl_multi_add_handle(multi_handle, curl_status_handle);
@@ -262,9 +268,17 @@ void CurlOlymptradeActions::send_requests(std::vector<bet_properties_t>& bet_pro
 
     if(handle_count == 0)
       break;
-  }
+  }       
 
-  curl_multi_cleanup(multi_handle);                           
+  curl_multi_remove_handle(multi_handle, curl_status_handle);
+
+  if(num_bet)
+  {
+    for(int i = 0; i < num_bet; i++)
+    {
+      curl_multi_remove_handle(multi_handle, curl_bet_handle[i]);
+    }
+  }  
 }
 
 void CurlOlymptradeActions::switch_to_demo()
