@@ -21,10 +21,6 @@ namespace wsclient
 
       int force_exit;
 
-      int reconnect_attemt;
-
-      int reconnect();
-
       int set_context_creation_info(struct lws_context_creation_info* context_creation_info, struct lws_protocols* protocols);
 
       int set_protocol_data(struct lws_protocols* protocols, int prot_num, 
@@ -36,8 +32,6 @@ namespace wsclient
     public:
 
       EstablishConnection(); 
-
-      int try_to_reconnect();
 
       int close_connection();  
 

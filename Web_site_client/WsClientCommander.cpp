@@ -23,17 +23,6 @@ void WsClientCommander::queue_get_access()
   }
 }
 
-void WsClientCommander::send_message()
-{
-  if(msgsnd(ws_queue_fd, (ws_namespace::ws_msg_buf_t*) &connection_actions, sizeof(ws_namespace::ws_msg_buf_t) - sizeof(long), 0) < 0)
-  {
-    printf("Can\'t send message to queue\n");
-    perror("msgsnd");
-  }
-  else
-    printf("Msg successfully sent\n");
-}
-
 void WsClientCommander::delete_queue()       //TODO::delete file or not
 {
    if(msgctl(ws_queue_fd, IPC_RMID, (struct msqid_ds*)NULL) < 0)
@@ -43,11 +32,35 @@ void WsClientCommander::delete_queue()       //TODO::delete file or not
    }
 }
 
-void WsClientCommander::recieve_from_queue()
+void WsClientCommander::send_message()
+{
+  if(msgsnd(ws_queue_fd, (ws_namespace::MsgBufWsCreateNewConnection*) &connection_actions, sizeof(ws_namespace::MsgBufWsCreateNewConnection) - sizeof(long), 0) < 0)
+  {
+    printf("Can\'t send message to queue\n");
+    perror("msgsnd");
+  }
+  else
+    printf("Msg successfully sent\n");
+}
+
+void WsClientCommander::send_ping_msg()
+{
+  ws_namespace::PingConnection ping = {1, ws_namespace::PING_MTYPE};
+
+  if(msgsnd(ws_queue_fd, (ws_namespace::PingConnection*) &ping, sizeof(ping) - sizeof(long), 0) < 0)
+  {
+    printf("WsClientCommander::send_ping_msg:: Can\'t send message to queue\n");
+    perror("msgsnd");
+  }
+  else
+    printf("send_ping_msg:: Msg successfully sent\n");
+}
+
+void WsClientCommander::recieve_ping_response()
 {
   ws_namespace::PingResult ping_result;
 
-  int rcv_result = msgrcv(ws_queue_fd, (ws_namespace::PingResult*) &ping_result, sizeof(ping_result) - sizeof(long), ws_namespace::recive_type, IPC_NOWAIT);
+  int rcv_result = msgrcv(ws_queue_fd, (ws_namespace::PingResult*) &ping_result, sizeof(ping_result) - sizeof(long), ws_namespace::PING_MTYPE, IPC_NOWAIT);
 
   if (rcv_result < 0)
   {
@@ -58,28 +71,46 @@ void WsClientCommander::recieve_from_queue()
   {
     printf("WsClientCommander::recieve_ping_response:: ping response recieved!\n");
 
-    if (ping_result.ready_to_recieve == false)
-     {
-       connection_opened = 0;
-       first_time_called = 1;
-     }
-
     if(ping_result.ready_to_recieve == true)
       connection_opened = 1;
   }
 }
 
-void WsClientCommander::send_ping_msg()
+void WsClientCommander::recieve_asset_close_msg()
 {
-  ws_namespace::PingConnection ping = {1, ws_namespace::recive_type};
+  ws_namespace::ConnectionClosedMsg asset_connection = {};
 
-  if(msgsnd(ws_queue_fd, (ws_namespace::PingConnection*) &ping, sizeof(ping) - sizeof(long), 0) < 0)
+  if(!connection_opened)
+    recieve_ping_response();
+
+  if(connection_opened)
   {
-    printf("WsClientCommander::send_ping_msg:: Can\'t send message to queue\n");
-    perror("msgsnd");
+    while(1)
+    {
+      int rcv_result = msgrcv(ws_queue_fd, (ws_namespace::ConnectionClosedMsg*) &asset_connection, sizeof(asset_connection) - sizeof(long), ws_namespace::ASSET_CLOSED_MTYPE, IPC_NOWAIT);
+
+      if (rcv_result < 0)
+      {
+        printf("WsClientCommander::recieve_asset_close_msg::error recieving msg\n");
+        perror("msgrcv");
+        break;
+      }
+      else
+      {
+        printf("WsClientCommander::recieve_asset_close_msg:: close msg recieved!\n");
+
+        current_status = current.get_asset_status(asset_connection.asset);
+
+        if(!current_status.locked)
+        {
+          connection_actions.action = !current_status.locked;
+          connection_actions.asset = asset_connection.asset;
+          
+          send_message();
+        }
+      }
+    }
   }
-  else
-    printf("send_ping_msg:: Msg successfully sent\n");
 }
 
 WsClientCommander::WsClientCommander()
@@ -133,7 +164,7 @@ void WsClientCommander::process_current_status(ParseOlymptradeJSON& current_pars
   {
     if(!connection_opened)
     {
-      recieve_from_queue();
+      recieve_ping_response();
     }
 
     if(connection_opened)
@@ -154,10 +185,12 @@ void WsClientCommander::process_current_status(ParseOlymptradeJSON& current_pars
           send_message();
         }
       }
+
+      recieve_asset_close_msg();
     }
     else
     {
-      printf("WsC1ientCommander:: Connection is not currently opened; Can't update\n");
+      printf("WsC1ientCommander::Connection is not currently opened; Can't update\n");
     }
   }
 }

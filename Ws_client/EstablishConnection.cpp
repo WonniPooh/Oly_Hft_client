@@ -43,7 +43,6 @@ wsclient::EstablishConnection::EstablishConnection()
   client_connect_info = {0};
   protocols[1] = {0};
   protocols[0] = {0};
-  reconnect_attemt = 0;
   force_exit = 0;
   context = NULL;
   wsi = NULL;
@@ -107,61 +106,9 @@ int wsclient::EstablishConnection::connect(int (*ws_service_callback)(struct lws
   }
 
   lws_context_destroy(context);
-
-  if(reconnect_attemt)
-  {
-    reconnect_attemt = 0;
-    reconnect();
-  }  
-}
-
-int wsclient::EstablishConnection::reconnect()
-{
-  force_exit = 0;
-
-  context = lws_create_context(&context_creation_info);           //creates the listening socket and takes care of all initialization in one step
-
-  if(context == NULL) 
-  {
-    printf("Context is NULL.\n");
-    return -1;
-  }
-  else
-    printf("Context created.\n");
-
-  client_connect_info.context = context;
-
-  wsi = lws_client_connect_via_info(&client_connect_info);        //This function creates a connection to a remote server
-
-  if (wsi == NULL) 
-  {
-      printf("Wsi create error.\n");
-      return -1;
-  }
-
-  std::thread server_responce_service(thread_routine_function_pointer, thread_args_struct_pointer, wsi);
-  server_responce_service.detach();
-
-  while(!force_exit)
-  {
-    lws_service(context, 10);                                     //lws_service - Service any pending websocket activity
-  }
-
-  lws_context_destroy(context);
-
-  if(reconnect_attemt)
-  {
-    reconnect_attemt = 0;
-    reconnect();    
-  }
 }
 
 int wsclient::EstablishConnection::close_connection()
 {
   force_exit = 1;
-}
-
-int wsclient::EstablishConnection::try_to_reconnect()
-{
-  reconnect_attemt = 1;
 }

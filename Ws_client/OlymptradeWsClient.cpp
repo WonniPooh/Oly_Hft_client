@@ -12,13 +12,7 @@ int ws_service_callback(struct lws* wsi_pointer,
   {
     case LWS_CALLBACK_CLIENT_ESTABLISHED:
         
-      if(current_client -> reconnection_attempt_num)
-      {
-        printf("[Main Service] Reconnection success.\n");
-        current_client -> reconnection_attempt_num = 0;
-      }
-      else
-        printf("[Main Service] Connection with server established.\n");
+      printf("[Main Service] Connection with server established.\n");
       
       current_client -> connection_flag = 1;
       break;
@@ -29,16 +23,7 @@ int ws_service_callback(struct lws* wsi_pointer,
 
       current_client -> connection_flag = 0;
       
-      if(current_client -> reconnection_attempt_num < MAX_RECONNECT_ATTEMPTS_NUM)
-      {
-        printf("[Main Service] Attempt to reconnect %d...\n", current_client -> reconnection_attempt_num++ + 1);
-        current_client -> reconnect();
-        current_client -> close_connection(0);
-      }
-      else
-      {
-        current_client -> close_connection(AUTHORIZED_CONTEXT_CLOSE);
-      }
+      current_client -> close_connection();
 
       break;
 
@@ -48,16 +33,8 @@ int ws_service_callback(struct lws* wsi_pointer,
 
       current_client -> connection_flag = 0;
       
-      if(current_client -> reconnection_attempt_num < MAX_RECONNECT_ATTEMPTS_NUM && !current_client -> authorized_context_close_flag) 
-      {
-        printf("[Main Service] Attempt to reconnect %d...\n", current_client -> reconnection_attempt_num++ + 1);
-        current_client -> reconnect();
-        current_client -> close_connection(0);
-      }
-      else
-      {
-        current_client -> close_connection(AUTHORIZED_CONTEXT_CLOSE);
-      }
+      current_client -> close_connection();
+      
       break;
 
     case LWS_CALLBACK_CLIENT_RECEIVE:
@@ -134,35 +111,23 @@ void OlymptradeWsClient::open_queue_connection()
   }
 
   PingConnection ping = {};
-  ping.mtype = 1;
-  ping.accept_msgtype = getpid();
+  ping.mtype = WSCLIENT_MSG_TYPE;
   ping.asset = current_asset_number;
 
   if(msgsnd(queue_fd, (PingConnection*) &ping, sizeof(PingConnection) - sizeof(long), 0) < 0)
   {
-    printf("Can\'t send message to queue\n");
+    printf("OlymptradeWsClient::open_queue_connection::Can\'t send message to queue\n");
+    perror("msgsnd");
   }
 }
 
 void OlymptradeWsClient::transmit_data(uint64_t current_timestamp, double price_close)
 {
-  if(queue_connection_eastablished)
-  {
-    SendData post_data = {};
-    post_data.mtype = getpid();
-    post_data.timestamp = current_timestamp;
-    post_data.close = price_close;
-
-    if(msgsnd(queue_fd, (SendData*) &post_data, sizeof(SendData) - sizeof(long), 0) < 0)
-    {
-      printf("process %d:: Can\'t send message to queue\n", getpid());
-    }
-  }
-  else
+  if(!queue_connection_eastablished)
   {
     PingSuccess test_success = {};
 
-    int rcv_result = msgrcv(queue_fd, (PingSuccess*) &test_success, sizeof(test_success) - sizeof(long), getpid(), IPC_NOWAIT);
+    int rcv_result = msgrcv(queue_fd, (PingSuccess*) &test_success, sizeof(test_success) - sizeof(long), WSCLIENT_MSG_RCV, IPC_NOWAIT);
 
     if (rcv_result < 0)
     {
@@ -170,10 +135,21 @@ void OlymptradeWsClient::transmit_data(uint64_t current_timestamp, double price_
     }
     else
     {
-      if(test_success.asset == current_asset_number)
-      {
+      if(test_success.ready_to_recieve == true)
         queue_connection_eastablished = 1;
-      }
+    }
+  }
+
+  if(queue_connection_eastablished)
+  {
+    SendData post_data = {};
+    post_data.mtype = WSCLIENT_MSG_TYPE;
+    post_data.timestamp = current_timestamp;
+    post_data.close = price_close;
+
+    if(msgsnd(queue_fd, (SendData*) &post_data, sizeof(SendData) - sizeof(long), 0) < 0)
+    {
+      printf("process %d:: Can\'t send message to queue\n", getpid());
     }
   }
 }
@@ -265,16 +241,15 @@ OlymptradeWsClient::OlymptradeWsClient()
   queue_file_pathname = "/usr/tmp/";
   queue_connection_eastablished = 0;
   current_asset_number = 0;
-  queue_fd = 0;
-  authorized_context_close_flag = 0;
-  reconnection_attempt_num = 0;
   connection_flag  = 0;
   stat_file = NULL;
+  queue_fd = 0;
   last = {};
 }
 
-int OlymptradeWsClient::run_client(std::string current_records_filename, int current_asset_num, std::string* asset_name)
+int OlymptradeWsClient::run_client(std::string current_records_filename, int current_asset_num, std::string* asset_name, pid_t main_queue_fd)
 {
+  ws_command_queue_fd = main_queue_fd;  
   current_asset_number = current_asset_num;
   records_filename = current_records_filename;
   current_asset_name = asset_name;
@@ -338,20 +313,26 @@ int OlymptradeWsClient::websocket_write_back(struct lws *wsi_in, char *str_data_
   return bytes_amount_written;
 }
 
-void OlymptradeWsClient::reconnect()
+void OlymptradeWsClient::send_asset_closed_msg()
 {
-  current_ws_connection.try_to_reconnect(); 
+  ConnectionClosedMsg post_data = {};
+  post_data.mtype = ASSET_CLOSED_MTYPE;
+  post_data.asset = current_asset_number;
+
+  if(msgsnd(ws_command_queue_fd, (ConnectionClosedMsg*) &post_data, sizeof(post_data) - sizeof(long), 0) < 0)
+  {
+    printf("process %d:: Can\'t send asset close message to queue\n", getpid());
+    perror("msgsnd");
+  }
 }
 
-void OlymptradeWsClient::close_connection(int parameter)
+void OlymptradeWsClient::close_connection()
 { 
   if(connection_flag)
-  {     
-    if(parameter == AUTHORIZED_CONTEXT_CLOSE)
-    {
-      authorized_context_close_flag = 1;
-      close_queue_connection();
-    }
+  { 
+    send_asset_closed_msg();
+
+    close_queue_connection();
 
     current_ws_connection.close_connection();
   }

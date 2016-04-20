@@ -43,6 +43,7 @@ int queue_get_access(const std::string& pathname_to_use);
 
 int load_all_names(std::string names[], FILE* file_from);
 int delete_bracket(const char* str_to_clean);
+int kill_child_process(pid_t& pid_to_kill);
 static void set_child_sigint_handler();
 static void set_main_sigint_handler();
 
@@ -98,17 +99,17 @@ int main(int argc, char **argv)
 
   fclose(temp);
 
-  int msgid = queue_get_access(QUEUE_PATHNAME);
+  int ws_command_queue_fd = queue_get_access(QUEUE_PATHNAME);
        
   ws_msg_buf_t recieved_cmd = {};
 
-  main_sighandler(0, NULL, (void*)&msgid);
+  main_sighandler(0, NULL, (void*)&ws_command_queue_fd);
   set_main_sigint_handler();
    
-  if((msgrcv(msgid, (PingConnection*) &ping, sizeof(PingConnection) - sizeof(long), 0, 0)) < 0)
+  if((msgrcv(ws_command_queue_fd, (PingConnection*) &ping, sizeof(PingConnection) - sizeof(long), 0, 0)) < 0)
   {
     printf("Can\'t receive ping message from queue\n");
-    delete_queue(msgid);
+    delete_queue(ws_command_queue_fd);
     exit(-1);
   }
 
@@ -117,7 +118,7 @@ int main(int argc, char **argv)
 
   printf("ping respponse type:: %d\n", ping.accept_msgtype);
   
-  if(msgsnd(msgid, (PingResult*) &ping_response, sizeof(PingResult) - sizeof(long), 0) < 0)
+  if(msgsnd(ws_command_queue_fd, (PingResult*) &ping_response, sizeof(PingResult) - sizeof(long), 0) < 0)
   {
     printf("Can\'t send ping_response to queue\n");
     perror("msgsnd");
@@ -127,16 +128,19 @@ int main(int argc, char **argv)
 
   while(1)
   {   
-    if((msgrcv(msgid, (ws_msg_buf_t*) &recieved_cmd, sizeof(ws_msg_buf_t) - sizeof(long), ping.mtype, 0)) < 0)
+    if((msgrcv(ws_command_queue_fd, (ws_msg_buf_t*) &recieved_cmd, sizeof(ws_msg_buf_t) - sizeof(long), ping.mtype, 0)) < 0)
     {
       printf("Can\'t receive message from queue\n");
-      delete_queue(msgid);
+      delete_queue(ws_command_queue_fd);
       exit(-1);
     }
     else
     {
-      if(recieved_cmd.action == ESTABLISH_CONNECTION && processes_running[recieved_cmd.asset] == 0)
+      if(recieved_cmd.action == ESTABLISH_CONNECTION)
       {
+        if(processes_running[recieved_cmd.asset] != 0)
+          kill_child_process(processes_running[recieved_cmd.asset]);
+
         if ((pid = fork()) < 0)
         {
           printf("Bad fork!\n");
@@ -148,29 +152,32 @@ int main(int argc, char **argv)
         }
         else
         {
-          msgid = 0;
-
           OlymptradeWsClient olymp_client;
           
           child_sighandler(0, NULL, (void*)&olymp_client);
           set_child_sigint_handler();
 
-          olymp_client.run_client(RECORDS_FILEPATH, recieved_cmd.asset, &asset_names_array[recieved_cmd.asset]);
+          olymp_client.run_client(RECORDS_FILEPATH, recieved_cmd.asset, &asset_names_array[recieved_cmd.asset], ws_command_queue_fd);
 
           break;
         }
       }
       else if(recieved_cmd.action == CLOSE_CONNECTION)
       {
-        int status;
-        kill(processes_running[recieved_cmd.asset], SIGINT);
-        waitpid(-1, &status, WNOHANG);
-        processes_running[recieved_cmd.asset] = 0;
+        kill_child_process(processes_running[recieved_cmd.asset]);
       }
     }
   } 
 
   return 0; 
+}
+
+int kill_child_process(pid_t& pid_to_kill)
+{
+  int status;
+  kill(pid_to_kill, SIGINT);
+  waitpid(-1, &status, WNOHANG);
+  pid_to_kill = 0;
 }
 
 int delete_bracket(const char* str_to_clean)
@@ -262,7 +269,7 @@ static void child_sighandler(int sig, siginfo_t* siginfo, void* data)
   if(!call_counter++)
     current_client = (OlymptradeWsClient*)data;
   else
-    current_client -> close_connection(AUTHORIZED_CONTEXT_CLOSE);
+    current_client -> close_connection();
 }
 
 int queue_get_access(const std::string& pathname_to_use)

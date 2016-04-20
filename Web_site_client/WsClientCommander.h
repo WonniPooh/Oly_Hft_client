@@ -7,21 +7,28 @@
 
 namespace ws_namespace
 {
-  const int ASSETS_AMOUNT = 18;
-  const int recive_type = 123; 
+  const int ASSETS_AMOUNT       = 18;
   const int MAX_USERNAME_LENGTH = 200;
+  const int PING_MTYPE          = 300; 
+  const int ASSET_CLOSED_MTYPE  = 700;
   const std::string queue_filename = "/WS_CLIENT_ASSET_STATUS";
 
   const std::string assets_names[ASSETS_AMOUNT] = {"AUDUSD", "AUDUSD_OTC", "EURCHF", "EURJPY", "EURRUB", 
                                                    "EURUSD", "EURUSD_OTC", "GBPUSD", "GBPUSD_OTC", "USDCAD", "USDCAD_OTC",
                                                    "USDCHF", "USDCHF_OTC", "USDJPY", "USDJPY_OTC", "USDRUB", "XAGUSD", "XAUUSD"};
 
-  typedef struct MsgBufWsCreateNewConnection
+  struct MsgBufWsCreateNewConnection
   {
     long msgtyp;
     int action;
     int asset;
-  } ws_msg_buf_t;
+  };
+
+  struct ConnectionClosedMsg
+  {
+    long msgtyp;
+    int asset;
+  };
 
   struct PingConnection
   {
@@ -42,7 +49,7 @@ class WsClientCommander
     int ws_queue_fd;
     int connection_opened;
     int first_time_called;
-    ws_namespace::ws_msg_buf_t connection_actions;
+    ws_namespace::MsgBufWsCreateNewConnection connection_actions;
     std::string queue_file_pathname;
     ParseOlymptradeJSON prev;
     ParseOlymptradeJSON current;
@@ -51,13 +58,15 @@ class WsClientCommander
 
     void queue_get_access();
 
-    void send_message();
-
-    void recieve_from_queue();
-
     void delete_queue();
 
     void send_ping_msg();
+
+    void recieve_ping_response();
+
+    void send_message();
+    
+    void recieve_asset_close_msg();
 
   public:    
 
