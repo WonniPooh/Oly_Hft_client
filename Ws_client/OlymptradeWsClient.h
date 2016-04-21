@@ -12,6 +12,7 @@
 #include "StatisticsFileSystem.h"
 #include "EstablishConnection.h"
   
+static const int MAX_POLL_TIMES = 0;                  //poll is check if there uis new data, it checks it every 10 ms, so it should be < 100 if it is working ok;
 static const int MAX_SERVER_REQUEST_LEN = 500;
 static const int MAX_SERVER_RESPOND_LENGTH = 200;
 static const int MAX_RECONNECT_ATTEMPTS_NUM = 5;
@@ -65,8 +66,8 @@ class OlymptradeWsClient
     pid_t ws_command_queue_fd;
     int queue_fd;
 
-    int current_asset_number;
 		int connection_flag;
+    int current_asset_number;
 		std::string current_statistics_file_pathname;
     std::string* current_asset_name;
     std::string queue_file_pathname;

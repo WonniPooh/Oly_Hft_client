@@ -1,6 +1,7 @@
 #include "OlymptradeWsClient.h"
 
-const int MAX_ASSET_NAME_LEN = 10;
+static const int MAX_USERNAME_LENGTH  = 200;
+const int ASSETS_AMOUNT = 18;
 
 int ws_service_callback(struct lws* wsi_pointer,
                            enum lws_callback_reasons reason, 
@@ -12,32 +13,28 @@ int ws_service_callback(struct lws* wsi_pointer,
   {
     case LWS_CALLBACK_CLIENT_ESTABLISHED:
         
-      printf("[Main Service] Connection with server established.\n");
-      
+      printf("[Main Service %d %s] Connection with server established.\n", getpid(), current_client -> current_asset_name -> c_str());
       current_client -> connection_flag = 1;
       break;
 
     case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         
-      printf("[Main Service] Connect with server error.\n");
-
-      current_client -> connection_flag = 0;
-      
+      printf("[Main Service %d %s] Connect with server error.\n", getpid(), current_client -> current_asset_name -> c_str() );
+     
       current_client -> close_connection();
 
       break;
 
     case LWS_CALLBACK_CLOSED:                                               //end of websocket session
       
-      printf("[Main Service] LWS_CALLBACK_CLOSED\n");
-
-      current_client -> connection_flag = 0;
+      printf("[Main Service %d %s] LWS_CALLBACK_CLOSED\n", getpid(), current_client -> current_asset_name -> c_str());
       
       current_client -> close_connection();
       
       break;
 
     case LWS_CALLBACK_CLIENT_RECEIVE:
+
       if(current_client -> current_asset_statistics.update_time())
       {
         fclose(current_client -> stat_file);
@@ -53,7 +50,7 @@ int ws_service_callback(struct lws* wsi_pointer,
       break;
 
     default:
-      
+
       break;
   }
 
@@ -116,7 +113,7 @@ void OlymptradeWsClient::open_queue_connection()
 
   if(msgsnd(queue_fd, (PingConnection*) &ping, sizeof(PingConnection) - sizeof(long), 0) < 0)
   {
-    printf("OlymptradeWsClient::open_queue_connection::Can\'t send message to queue\n");
+    printf("process %d asset %s  OlymptradeWsClient::open_queue_connection::Can\'t send message to queue\n", getpid(), current_asset_name -> c_str());
     perror("msgsnd");
   }
 }
@@ -131,6 +128,8 @@ void OlymptradeWsClient::transmit_data(uint64_t current_timestamp, double price_
 
     if (rcv_result < 0)
     {
+	  printf("process %d asset %s  OlymptradeWsClient::transmit_data::", getpid(), current_asset_name -> c_str());
+	  fflush(stdout);
       perror("msgrcv");
     }
     else
@@ -149,7 +148,7 @@ void OlymptradeWsClient::transmit_data(uint64_t current_timestamp, double price_
 
     if(msgsnd(queue_fd, (SendData*) &post_data, sizeof(SendData) - sizeof(long), 0) < 0)
     {
-      printf("process %d:: Can\'t send message to queue\n", getpid());
+      printf("process %d asset %s:: Can\'t send message to queue\n", getpid(), current_asset_name -> c_str());
     }
   }
 }
@@ -238,7 +237,11 @@ void OlymptradeWsClient::record_current_second_data(void* in_str)
 
 OlymptradeWsClient::OlymptradeWsClient()
 {
-  queue_file_pathname = "/usr/tmp/";
+  char current_username[MAX_USERNAME_LENGTH] = {};
+  getlogin_r(current_username, MAX_USERNAME_LENGTH);
+
+  queue_file_pathname = std::string("/home/") + std::string(current_username) + std::string("/"); 
+
   queue_connection_eastablished = 0;
   current_asset_number = 0;
   connection_flag  = 0;
@@ -264,7 +267,7 @@ int OlymptradeWsClient::run_client(std::string current_records_filename, int cur
 
   if(!stat_file)
   {
-    printf("Error opening statistics file\n");
+    printf("OlymptradeWsClient::run_client::asset %s::Error opening statistics file\n", current_asset_name -> c_str());
     exit(0);
   }
 
@@ -321,7 +324,7 @@ void OlymptradeWsClient::send_asset_closed_msg()
 
   if(msgsnd(ws_command_queue_fd, (ConnectionClosedMsg*) &post_data, sizeof(post_data) - sizeof(long), 0) < 0)
   {
-    printf("process %d:: Can\'t send asset close message to queue\n", getpid());
+    printf("asset %s process %d:: Can\'t send asset close message to queue\n", current_asset_name -> c_str(), getpid());
     perror("msgsnd");
   }
 }
@@ -337,5 +340,5 @@ void OlymptradeWsClient::close_connection()
     current_ws_connection.close_connection();
   }
   else
-    printf("OlymptradeWsClient:: No connection to close\n");
+    printf("process %d asset %s OlymptradeWsClient:: No connection to close\n", getpid(), current_asset_name -> c_str());
 }
