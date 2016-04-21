@@ -33,7 +33,7 @@ typedef struct MsgBufWsCreateNewConnection
 
 const std::string RECORDS_FILENAME = "/Creation_data";
 const int MAX_PROGRAMM_PATH_LEN = 500;
-const int ASSETS_AMOUNT = 20;                                   //txlib -> examples ldview -- graph algorithms doxygen help + dynamic array for using threads;
+const int ASSETS_AMOUNT = 18;                                   //txlib -> examples ldview -- graph algorithms doxygen help + dynamic array for using threads;
 const int MAX_USERNAME_LENGTH = 200;
                                         
 static std::string RECORDS_FILEPATH;                            //doxygen.org -> manual   txlib -> help in every function + tx/doc files
@@ -53,6 +53,8 @@ static void child_sighandler(int sig, siginfo_t* siginfo, void* data);
 
 int main(int argc, char **argv)
 {
+  printf("Main process id is %d\n", getpid());
+
   struct PingConnection
   {
     long mtype;
@@ -116,7 +118,7 @@ int main(int argc, char **argv)
   ping_response.ready_to_recieve = 1;
   ping_response.mtype = ping.accept_msgtype;
 
-  printf("ping respponse type:: %d\n", ping.accept_msgtype);
+  printf("ping response type:: %d\n", ping.accept_msgtype);
   
   if(msgsnd(ws_command_queue_fd, (PingResult*) &ping_response, sizeof(PingResult) - sizeof(long), 0) < 0)
   {
@@ -124,7 +126,7 @@ int main(int argc, char **argv)
     perror("msgsnd");
   }
   else
-    printf("Ping msg successfully sent\n");  
+    printf("Ping response msg successfully sent\n");  
 
   while(1)
   {   
@@ -138,6 +140,8 @@ int main(int argc, char **argv)
     {
       if(recieved_cmd.action == ESTABLISH_CONNECTION)
       {
+        printf("ESTABLISH_CONNECTION asset %d\n", recieved_cmd.asset);
+
         if(processes_running[recieved_cmd.asset] != 0)
           kill_child_process(processes_running[recieved_cmd.asset]);
 
@@ -164,6 +168,7 @@ int main(int argc, char **argv)
       }
       else if(recieved_cmd.action == CLOSE_CONNECTION)
       {
+        printf("CLOSE_CONNECTION asset %d\n", recieved_cmd.asset);
         kill_child_process(processes_running[recieved_cmd.asset]);
       }
     }
