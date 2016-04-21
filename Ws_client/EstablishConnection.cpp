@@ -102,7 +102,7 @@ int wsclient::EstablishConnection::connect(int (*ws_service_callback)(struct lws
  
   while(!force_exit)
   {
-    lws_service(context, 10);                                     //lws_service - Service any pending websocket activity
+    lws_service(context, LWS_SERVICE_CALL_PERIOD);                                     //lws_service - Service any pending websocket activity
   }
 
   lws_context_destroy(context);
