@@ -1,4 +1,4 @@
-#include "AssetWinpercRecieve.h"
+#include "AssetsWinpercRecieve.h"
 
 void AssetsWinpercRecieve::open_winperc_queue()
 { 
@@ -129,5 +129,8 @@ uint16_t AssetsWinpercRecieve::get_winperc()
   if(ping_recieved)
     return asset_winperc;
   else
-    printf("Ping msg does not recieved! No data to return\n")
+  {
+    printf("Ping msg does not recieved! No data to return\n");
+    return -1;
+  }
 }
