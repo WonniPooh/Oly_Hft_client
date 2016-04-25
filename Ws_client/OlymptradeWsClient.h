@@ -12,10 +12,8 @@
 #include "StatisticsFileSystem.h"
 #include "EstablishConnection.h"
   
-static const int MAX_POLL_TIMES = 0;                  //poll is check if there uis new data, it checks it every 10 ms, so it should be < 100 if it is working ok;
 static const int MAX_SERVER_REQUEST_LEN = 500;
 static const int MAX_SERVER_RESPOND_LENGTH = 200;
-static const int MAX_RECONNECT_ATTEMPTS_NUM = 5;
 static const int ASSET_CLOSED_MTYPE  = 700;
 static const int WSCLIENT_MSG_TYPE = 300;
 static const int WSCLIENT_MSG_RCV = 400;

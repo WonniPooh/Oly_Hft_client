@@ -6,6 +6,8 @@ void AssetQuoteRecieve::open_quote_queue()
 
   FILE* temp = fopen(quote_queue_file_pathname.c_str(), "a+");
 
+  printf("%s\n", quote_queue_file_pathname.c_str());
+
   fclose(temp);
 
   if ((key = ftok(quote_queue_file_pathname.c_str(), 0)) < 0)
@@ -126,5 +128,8 @@ const quote_namespace::RecieveData* AssetQuoteRecieve::get_quote()
   if(ping_recieved)
     return &current_quote;
   else
+  {
     printf("Ping msg does not recieved! No data to return\n");
+    return NULL;
+  }
 }

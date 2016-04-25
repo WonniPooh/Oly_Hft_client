@@ -67,5 +67,5 @@ class AssetsStatusRecieve
 
     void update_availability();
 
-    bool get_availability();
+    int get_availability();
 };

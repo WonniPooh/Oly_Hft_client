@@ -13,7 +13,6 @@ namespace quote_namespace
   const int WSCLIENT_MSG_TYPE = 300;
   const int WSCLIENT_MSG_RCV = 400;
   const int MAX_USERNAME_LENGTH = 200;
-
   const std::string assets_names[ASSETS_AMOUNT] = {"AUDUSD", "AUDUSD_OTC", "EURCHF", "EURJPY", "EURRUB", 
                                                    "EURUSD", "EURUSD_OTC", "GBPUSD", "GBPUSD_OTC", "USDCAD", "USDCAD_OTC",
                                                    "USDCHF", "USDCHF_OTC", "USDJPY", "USDJPY_OTC", "USDRUB", "XAGUSD", "XAUUSD"};

@@ -117,16 +117,19 @@ void AssetsStatusRecieve::set_serviced_asset(int asset_set_num)
   }
 }
 
-bool AssetsStatusRecieve::get_availability()
+int AssetsStatusRecieve::get_availability()
 {
   if(asset == -1)
   {
     printf("Set please asset to serve\n");
-    return 0;
+    return -1;
   }
 
   if(ping_recieved)
     return asset_availability;
   else
-    printf("Ping msg does not recieved! No data to return\n")
+  {
+    printf("Ping msg does not recieved! No data to return\n");
+    return -1;
+  }
 }
