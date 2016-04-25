@@ -249,7 +249,6 @@ WinpercCommander::WinpercCommander()
     asset_status[i] = 0;
   }
   
-  current = {};
   current_status = {};
 
   status_update_needed_count = winperc_namespace::ASSETS_AMOUNT;
