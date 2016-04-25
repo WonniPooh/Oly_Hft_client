@@ -10,6 +10,7 @@
 #include <ctime>
 #include "curl/curl.h"
 #include <vector>
+#include "OlyClientDealService.h"
 #pragma comment(lib,"curllib.lib")
 
 #include <unistd.h>
@@ -23,15 +24,6 @@ enum REQUEST_TYPES
   PLAY_REAL,
   LOG_OUT
 };
-
-typedef struct BET_PROPERTIES
-{
-  int asset;
-  std::uint64_t id; 
-  std::uint32_t amount;
-  std::time_t timeframe;
-  bool direction;
-}bet_properties_t;
 
 class CurlOlymptradeActions
 {
@@ -98,7 +90,7 @@ class CurlOlymptradeActions
     //функция конвертации string char в url string (%XX)
     std::string url_encode(CURL* curl, const std::string& text);
 
-    void set_host_url(CURL* curl_handle, int request_type, bet_properties_t* bet_props);
+    void set_host_url(CURL* curl_handle, int request_type, deals_namespace::NewBet* bet_props);
 
     void init_bet_handle();
 
@@ -117,9 +109,9 @@ class CurlOlymptradeActions
  
     ~CurlOlymptradeActions();
 
-    void log_into_platform(std::string login, std::string password, size_t responce_data_process(char *, size_t, size_t, void*));
+    void log_into_platform(std::string login, std::string password, size_t responce_data_process(char *, size_t, size_t, void*), OlyClientDealService* deals_service);
 
-    void send_requests(std::vector<bet_properties_t>& bet_props); 
+    void send_requests(std::vector<deals_namespace::NewBet> bet_props); 
 
     void switch_to_demo();
 

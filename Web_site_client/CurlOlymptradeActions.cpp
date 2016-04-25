@@ -23,7 +23,7 @@ std::string CurlOlymptradeActions::url_encode(CURL* curl, const std::string& tex
   return result;
 }
 
-void CurlOlymptradeActions::set_host_url(CURL* curl_handle, int request_type, bet_properties_t* bet_props)
+void CurlOlymptradeActions::set_host_url(CURL* curl_handle, int request_type, deals_namespace::NewBet* bet_props)
 {
   assert(curl_handle);
   
@@ -43,7 +43,7 @@ void CurlOlymptradeActions::set_host_url(CURL* curl_handle, int request_type, be
   }
   else if(MAKE_A_BET == request_type)
   {
-    current_url_configuration = bet_url_pattern_part_one + SSTR(bet_props -> amount) + bet_url_pattern_part_two 
+    current_url_configuration = bet_url_pattern_part_one + SSTR(bet_props -> deal_amount) + bet_url_pattern_part_two 
     + SSTR(bet_props -> timeframe) + bet_url_pattern_part_three + directions[bet_props -> direction] + bet_url_pattern_part_four 
     + assets_names[bet_props -> asset] + bet_url_pattern_part_five;
   }
@@ -183,7 +183,7 @@ CurlOlymptradeActions::~CurlOlymptradeActions()
   }
 }
 
-void CurlOlymptradeActions::log_into_platform(std::string login, std::string password, size_t responce_data_process(char *, size_t, size_t, void*))
+void CurlOlymptradeActions::log_into_platform(std::string login, std::string password, size_t responce_data_process(char *, size_t, size_t, void*), OlyClientDealService* deals_service)
 {
   assert(responce_data_process);
   responce_data_process_pointer = responce_data_process;
@@ -212,7 +212,7 @@ void CurlOlymptradeActions::log_into_platform(std::string login, std::string pas
   curl_easy_setopt(curl_login_handle, CURLOPT_COOKIEJAR, "mycookiefile");
                
   curl_easy_setopt(curl_login_handle, CURLOPT_WRITEFUNCTION, responce_data_process_pointer);
-  curl_easy_setopt(curl_login_handle, CURLOPT_WRITEDATA, NULL);
+  curl_easy_setopt(curl_login_handle, CURLOPT_WRITEDATA, deals_service);  //3 arg pass here a pointer to data which you want tot recieve as 4 argument of responce_data_process function
 
   // POST - запрос с авторизацией (происходит получение кукисов)
   curl_easy_setopt(curl_login_handle, CURLOPT_POSTFIELDS, data_to_post.c_str());
@@ -231,7 +231,7 @@ void CurlOlymptradeActions::log_into_platform(std::string login, std::string pas
   }
 }
 
-void CurlOlymptradeActions::send_requests(std::vector<bet_properties_t>& bet_props) 
+void CurlOlymptradeActions::send_requests(std::vector<deals_namespace::NewBet> bet_props) 
 { 
   static int count = 0;
 
@@ -255,6 +255,11 @@ void CurlOlymptradeActions::send_requests(std::vector<bet_properties_t>& bet_pro
 
   if(num_bet)
   {
+    printf("THERE IS A BET\n");
+
+
+    sleep(5);
+
     for(int i = 0; i < num_bet; i++)
     {
       set_host_url(curl_bet_handle[i], MAKE_A_BET, &bet_props[i]);
