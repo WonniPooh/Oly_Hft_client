@@ -129,8 +129,10 @@ WsClientCommander::WsClientCommander()
   getlogin_r(current_username, ws_namespace::MAX_USERNAME_LENGTH);
 
   queue_file_pathname = std::string("/home/") + std::string(current_username) + ws_namespace::queue_filename;
-
   queue_get_access();
+  std::string assets_file = std::string("/home/") + std::string(current_username) + ws_namespace::asset_names_filename;
+  names.load_asset_names(&assets_file);
+  assets_amount = names.get_assets_amount();
 }
 
 void WsClientCommander::process_current_status(ParseOlymptradeJSON& current_parsed)
@@ -144,7 +146,7 @@ void WsClientCommander::process_current_status(ParseOlymptradeJSON& current_pars
 
     send_ping_msg();
 
-    for(int i = 0; i < ws_namespace::ASSETS_AMOUNT; i++)
+    for(int i = 0; i < assets_amount; i++)
     {
       current_status = current.get_asset_status(i);
 
@@ -153,7 +155,7 @@ void WsClientCommander::process_current_status(ParseOlymptradeJSON& current_pars
         connection_actions.action = !current_status.locked;
         connection_actions.asset = i;
 
-        printf("connection_actions.asset_name::%s\n", ws_namespace::assets_names[i].c_str());
+        printf("connection_actions.asset_name::%s\n", names.get_asset_name(i) -> c_str());
         printf("current_status.locked::%d\n", current_status.locked);
 
         send_message();
@@ -169,7 +171,7 @@ void WsClientCommander::process_current_status(ParseOlymptradeJSON& current_pars
 
     if(connection_opened)
     {
-      for(int i = 0; i < ws_namespace::ASSETS_AMOUNT; i++)
+      for(int i = 0; i < assets_amount; i++)
       {
         prev_status = prev.get_asset_status(i);
         current_status = current.get_asset_status(i);
@@ -179,7 +181,7 @@ void WsClientCommander::process_current_status(ParseOlymptradeJSON& current_pars
           connection_actions.action = !current_status.locked;
           connection_actions.asset = i;
           
-          printf("connection_actions.asset_name::%s\n", ws_namespace::assets_names[i].c_str());
+          printf("connection_actions.asset_name::%s\n", names.get_asset_name(i) -> c_str());
           printf("current_status.locked::%d\n", current_status.locked);
 
           send_message();

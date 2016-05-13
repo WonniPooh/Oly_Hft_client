@@ -40,13 +40,13 @@ namespace wsclient
 
       ConnectionData();
 
-      void LoadSession (std::string record_to_load, const char* filename_to_open);
+      void load_session (std::string record_to_load, const char* filename_to_open);
      
-      void CreateSession(ParseCmdArgs args_parsed, char* file_to_record_in);
+      void create_session(ParseCmdArgs args_parsed, char* file_to_record_in);
 
       int check_name_existance (char* record_name, FILE* file_check_in);
-
-      int is_there_query();
+  
+      bool is_there_query();
      
       int get_first_query(std::string* str_to_write);
 

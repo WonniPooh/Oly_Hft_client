@@ -5,18 +5,15 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "AssetNames.h"
 
 namespace assetstatus_namespace
 {
-  const int ASSETS_AMOUNT = 18;
   const int recive_mtype = 500;
   const int MAX_USERNAME_LENGTH = 200;
   const int status_changed_mtype = 2000;
   const std::string status_queue_filename = "NEURO_ASSETS_STATUS";
-
-  const std::string assets_names[ASSETS_AMOUNT] = {"AUDUSD", "AUDUSD_OTC", "EURCHF", "EURJPY", "EURRUB", 
-                                                   "EURUSD", "EURUSD_OTC", "GBPUSD", "GBPUSD_OTC", "USDCAD", "USDCAD_OTC",
-                                                   "USDCHF", "USDCHF_OTC", "USDJPY", "USDJPY_OTC", "USDRUB", "XAGUSD", "XAUUSD"};
+  const std::string asset_names_filename = "/all_assets.txt";
 
  struct ASSET_AVAILABLE
   {
@@ -49,9 +46,11 @@ class AssetsStatusRecieve
   private:
   	int asset;
     int ping_recieved;
+    int assets_amount;
     bool asset_availability;
     int asset_status_queue_fd;
     std::string status_queue_file_pathname;
+    AssetNames names;
 
     void open_status_queue();
     

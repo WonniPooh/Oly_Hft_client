@@ -7,21 +7,20 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <inttypes.h>
+#include "AssetNames.h"
 
 namespace deals_namespace
 {
-  const int PING_RESPONSE_CONSTANT       	= 228;
-  const int PING_CONSTANT       					= 322;
-  const int ASSETS_AMOUNT       					= 18;
   const int MAX_DEALS_OPEN      					= 10;
+  const int PING_RESPONSE_CONSTANT        = 228;
+  const int PING_CONSTANT                 = 322;
   const int DEAL_STATUS_MTYPE   					= 100;
   const int DEAL_RESULTS_MTYPE  					= 200;
   const int NEW_DEAL_MTYPE      					= 400;
   const int MAX_USERNAME_LENGTH 					= 200;
+  const std::string asset_names_filename = "/all_assets.txt";
 
-  const std::string assets_names[ASSETS_AMOUNT] = {"AUDUSD", "AUDUSD_OTC", "EURCHF", "EURJPY", "EURRUB", 
-                                                   "EURUSD", "EURUSD_OTC", "GBPUSD", "GBPUSD_OTC", "USDCAD", "USDCAD_OTC",
-                                                   "USDCHF", "USDCHF_OTC", "USDJPY", "USDJPY_OTC", "USDRUB", "XAGUSD", "XAUUSD"};
+
  
   struct NewBet
   {
@@ -65,7 +64,9 @@ namespace deals_namespace
 class NeuroDealAction
 {
   private:
+    AssetNames names;
     int ping_success;
+    int assets_amount;
     int open_deals_amount;
     int free_array_position;
     int asset_deals_queue_fd;

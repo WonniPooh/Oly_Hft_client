@@ -10,6 +10,8 @@
 #include <ctime>
 #include "curl/curl.h"
 #include <vector>
+#include <unistd.h>
+#include "AssetNames.h"
 #include "OlyClientDealService.h"
 #pragma comment(lib,"curllib.lib")
 
@@ -29,9 +31,10 @@ class CurlOlymptradeActions
 {
   private:
     
+    const std::string asset_names_filename = "/all_assets.txt";
     static const int MAX_DEAL_AMOUNT = 10;
-    static const int ASSETS_AMOUNT = 18;
 
+    AssetNames names;
     int log_in_success;
 
     CURL* curl_login_handle;
@@ -52,10 +55,6 @@ class CurlOlymptradeActions
     struct curl_slist *status_update_headers;
 
     size_t (*responce_data_process_pointer)(char *, size_t, size_t, void*);
-
-    const std::string assets_names[ASSETS_AMOUNT] = {"AUDUSD", "AUDUSD_OTC", "EURCHF", "EURJPY", "EURRUB", 
-                                               "EURUSD", "EURUSD_OTC", "GBPUSD", "GBPUSD_OTC", "USDCAD", "USDCAD_OTC",
-                                               "USDCHF", "USDCHF_OTC", "USDJPY", "USDJPY_OTC", "USDRUB", "XAGUSD", "XAUUSD"};
 
     const std::string directions[2] = {"down", "up"};
 
@@ -105,7 +104,7 @@ class CurlOlymptradeActions
 
   public:
 
-    CurlOlymptradeActions();
+    CurlOlymptradeActions();        //rename CurlOlymptrade.....
  
     ~CurlOlymptradeActions();
 

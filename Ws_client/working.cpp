@@ -1,10 +1,9 @@
-/*
+*/
  * libwebsockets-client
  *
  * Copyright (C) 2016 Alex Serbin
  *
  * g++ working.cpp OlymptradeWsClient.cpp EstablishConnection.cpp ConnectionData.cpp StatisticsFileSystem.cpp ParseCmdArgs.cpp json11/json11.cpp -L/usr/local/lib -lwebsockets -pthread -g -std=c++11
- * TODO:: Attemt to reconnect after n minutes after last data recieved
  */
 
 #include <stdlib.h>
@@ -15,6 +14,7 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 
+#include "AssetNames.h"
 #include "ParseCmdArgs.h"
 #include "OlymptradeWsClient.h"
 
@@ -24,7 +24,7 @@ enum
   ESTABLISH_CONNECTION
 };
 
-typedef struct MsgBufWsCreateNewConnection
+typedef struct MsgBufWsCreateNewConnectio
 {
   long msgtyp;
   int action;
@@ -33,7 +33,7 @@ typedef struct MsgBufWsCreateNewConnection
 
 const std::string RECORDS_FILENAME = "/Creation_data";
 const int MAX_PROGRAMM_PATH_LEN = 500;
-const int ASSETS_AMOUNT = 18;                                   //txlib -> examples ldview -- graph algorithms doxygen help + dynamic array for using threads;
+int ASSETS_AMOUNT = 0;                                   //txlib -> examples ldview -- graph algorithms doxygen help + dynamic array for using threads;
 const int MAX_USERNAME_LENGTH = 200;
                                         
 static std::string RECORDS_FILEPATH;                            //doxygen.org -> manual   txlib -> help in every function + tx/doc files
@@ -41,8 +41,6 @@ static std::string RECORDS_FILEPATH;                            //doxygen.org ->
 void delete_queue(int msgid);
 int queue_get_access(const std::string& pathname_to_use);
 
-int load_all_names(std::string names[], FILE* file_from);
-int delete_bracket(const char* str_to_clean);
 int kill_child_process(pid_t& pid_to_kill);
 static void set_child_sigint_handler();
 static void set_main_sigint_handler();
@@ -70,32 +68,22 @@ int main(int argc, char **argv)
   PingConnection ping = {};
   PingResult ping_response = {};
 
-  pid_t pid = 1;
-  int records_amount = 0;
-  pid_t processes_running[ASSETS_AMOUNT] = {};
-  char current_username[MAX_USERNAME_LENGTH] = {};
-  getlogin_r(current_username, MAX_USERNAME_LENGTH);
-  std::string QUEUE_PATHNAME = "/home/" + std::string(current_username) + "/WS_CLIENT_ASSET_STATUS";
-
   char* getcwd_result_ptr = getcwd(NULL, MAX_PROGRAMM_PATH_LEN);
 
   RECORDS_FILEPATH = getcwd_result_ptr + RECORDS_FILENAME;
 
   free(getcwd_result_ptr);
 
-  std::string asset_names_array[ASSETS_AMOUNT];
+  AssetNames names_class;
+  names_class.load_asset_names(&RECORDS_FILEPATH);
+  ASSETS_AMOUNT = names_class.get_assets_amount();
 
-  FILE* my_file = fopen(RECORDS_FILEPATH.c_str(), "r");
-  
-  if(!my_file)
-  {
-    printf("Error opening file with records\n");
-    return -1;
-  }
-  
-  records_amount = load_all_names(asset_names_array, my_file);
-  
-  fclose(my_file);
+
+  pid_t pid = 1;
+  pid_t* processes_running = new pid_t[ASSETS_AMOUNT];
+  char current_username[MAX_USERNAME_LENGTH] = {};
+  getlogin_r(current_username, MAX_USERNAME_LENGTH);
+  std::string QUEUE_PATHNAME = "/home/" + std::string(current_username) + "/WS_CLIENT_ASSET_STATUS";
 
   FILE* temp = fopen(QUEUE_PATHNAME.c_str(), "a+");
 
@@ -157,11 +145,10 @@ int main(int argc, char **argv)
         else
         {
           OlymptradeWsClient olymp_client;
-          
           child_sighandler(0, NULL, (void*)&olymp_client);
           set_child_sigint_handler();
 
-          olymp_client.run_client(RECORDS_FILEPATH, recieved_cmd.asset, &asset_names_array[recieved_cmd.asset], ws_command_queue_fd);
+          olymp_client.run_client(RECORDS_FILEPATH, recieved_cmd.asset, names_class.get_asset_name(recieved_cmd.asset), ws_command_queue_fd);
 
           break;
         }
@@ -174,6 +161,8 @@ int main(int argc, char **argv)
     }
   } 
 
+  delete [] processes_running;
+
   return 0; 
 }
 
@@ -183,45 +172,6 @@ int kill_child_process(pid_t& pid_to_kill)
   kill(pid_to_kill, SIGINT);
   waitpid(-1, &status, WNOHANG);
   pid_to_kill = 0;
-}
-
-int delete_bracket(const char* str_to_clean)
-{
-  if(!str_to_clean)
-  {
-    printf("[Delete bracket]:Invalid string to clean pointer\n");
-    return -1;
-  }
-  int str_length = strlen(str_to_clean);
-
-  if(((char*)str_to_clean)[str_length - 2] != ']')
-    ((char*)str_to_clean)[str_length - 1] = '\0';
-  else
-    ((char*)str_to_clean)[str_length - 2] = '\0';
-}
-
-int load_all_names(std::string names[], FILE* file_from)
-{
-  if(!file_from)
-  {
-    printf("[Load records names]: Invalid file pointer to read from\n");
-  }
-
-  int counter = 0;
-
-  char current_name[20] = {};
-
-  while(!feof(file_from))
-  {
-    fscanf(file_from, "[[Record_name:%s]", current_name);
-    delete_bracket(current_name);
-   
-    names[counter++].assign(current_name, strlen(current_name));
-   
-    fscanf(file_from, "%*[^\n]\n", NULL);
-  }
-
-  return counter;
 }
 
 static void set_main_sigint_handler()                            // register the signal SIGINT handler 

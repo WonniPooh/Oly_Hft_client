@@ -5,6 +5,35 @@ std::mutex bet_status_mutex;
 //-----------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------
 
+ParseOlymptradeJSON::ParseOlymptradeJSON()
+{
+  char current_username[200] = {};          //TODO global const
+  getlogin_r(current_username, 200);
+
+  std::string assets_file = std::string("/home/") + std::string(current_username) + asset_names_filename; //TODO const asset_names_filename
+  names.load_asset_names(&assets_file);
+  assets_amount = names.get_assets_amount();
+
+  for(int i = 0; i < assets_amount; i++)
+  {
+    AssetStatus new_status = {};
+    assets_array.push_back(new_status);
+  }
+
+  for(int i = 0; i < MAX_DEAL_AMOUNT; i++)
+  {
+    finished_deals[i] = {};
+  }
+
+  balance = 0;
+  demo_balance = 0;
+  login_result = 0;
+  bets_new_status_counter = 0;
+}
+
+//-----------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------
+
 void ParseOlymptradeJSON::parse_login_json(std::string input)
 {
   std::string in_error;
@@ -14,7 +43,12 @@ void ParseOlymptradeJSON::parse_login_json(std::string input)
   {
     printf("json '%s' parse error '%s', skipping\n", input.c_str(), in_error.c_str());
   }
-  assert(in_json.is_object());
+  //test
+  if(!in_json.is_object())
+  {
+    return;
+  }
+  //assert(!in_json.is_object());
 
   auto input_json = in_json.object_items();
   assert(!input_json.empty());
@@ -34,8 +68,12 @@ void ParseOlymptradeJSON::parse_update_json(std::string input)
   {
     printf("json '%s' parse error '%s', skipping\n", input.c_str(), in_error.c_str());
   }
-  assert(in_json.is_object());
-
+    //test
+  if(!in_json.is_object())
+  {
+    return;
+  }
+  //assert(!in_json.is_object());
   auto input_json = in_json.object_items();
   assert(!input_json.empty());
 
@@ -49,16 +87,16 @@ void ParseOlymptradeJSON::parse_update_json(std::string input)
 
   demo_balance = input_json["user"]["balance_demo"].number_value();
 
-  for(int i = 0; i < ASSETS_AMOUNT; i++)
+  for(int i = 0; i < assets_amount; i++)
   {
-    if(pairs[assets_names[i].c_str()]["locked"].bool_value())
+    if(pairs[names.get_asset_name(i) -> c_str()]["locked"].bool_value())
       assets_array[i].locked = true;
     else
       assets_array[i].locked = false;
 
-    assets_array[i].sentiment = pairs[assets_names[i].c_str()]["sentiment"].int_value();
+    assets_array[i].sentiment = pairs[names.get_asset_name(i) -> c_str()]["sentiment"].int_value();
 
-    assets_array[i].winperc   = pairs[assets_names[i].c_str()]["winperc"].int_value();   
+    assets_array[i].winperc   = pairs[names.get_asset_name(i) -> c_str()]["winperc"].int_value();   
   }
 
   auto user_deals_current = user_deals["current"].array_items();
@@ -77,6 +115,48 @@ void ParseOlymptradeJSON::parse_update_json(std::string input)
     auto temp2 = temp1.object_items();
     parse_deals_data(temp2, finished_deals, i);
   }
+}
+
+void ParseOlymptradeJSON::parse_bet_response_json(std::string input)
+{
+  bet_status_mutex.lock();
+
+  AssetDeal new_deal_status = {};
+
+  std::string in_error;
+  json11::Json in_json = json11::Json::parse((const char *)input.c_str(), in_error);
+
+  if (!in_error.empty()) 
+  {
+    printf("json '%s' parse error '%s', skipping\n", input.c_str(), in_error.c_str());
+  }
+    //test
+  if(!in_json.is_object())
+  {
+    return;
+  }
+  //assert(!in_json.is_object());
+
+  auto input_json = in_json.object_items();
+  assert(!input_json.empty());
+
+  new_deal_status.result = input_json["result"].bool_value();
+
+  if(new_deal_status.result == 1)
+  {
+    auto deal = input_json["deal"].object_items();
+    assert(!deal.empty());
+
+    parse_deals_data(deal, &new_deal_status, 0);
+  }
+  else
+    new_deal_status.amount = -1;
+
+  bets_new_status_counter++;
+
+  bet_status_response.push_back(new_deal_status);
+
+  bet_status_mutex.unlock();
 }
 
 void ParseOlymptradeJSON::parse_deals_data(std::map< std::string, json11::Json >& instance_DealsCurrentFinished, struct AssetDeal* deals_array, int cur_position)
@@ -149,7 +229,25 @@ double ParseOlymptradeJSON::get_demo_balance()
 }
 
 //-----------------------------------------------------------------------------------------------
+
+int ParseOlymptradeJSON::get_new_bet_status_amount()
+{
+  return bets_new_status_counter;
+}
+
+AssetDeal ParseOlymptradeJSON::get_deal_status()
+{
+  bets_new_status_counter--;
+
+  AssetDeal deal_to_return = bet_status_response.back();
+
+  bet_status_response.pop_back();
+
+  return deal_to_return;
+}
+
 //-----------------------------------------------------------------------------------------------
+
 
 int ParseOlymptradeJSON::get_login_result()
 {
@@ -161,24 +259,29 @@ const std::string& ParseOlymptradeJSON::get_login_error()
   return login_error_msg;
 }
 
-AssetDeal* ParseOlymptradeJSON::get_current_deal(int deal_num)
+//-----------------------------------------------------------------------------------------------
+
+
+const AssetDeal* ParseOlymptradeJSON::get_current_deal(int deal_num)
 {
   return &current_deals[deal_num];
 }
 
-AssetDeal* ParseOlymptradeJSON::get_finished_deal(int deal_num)
+const AssetDeal* ParseOlymptradeJSON::get_finished_deal(int deal_num)
 {
   return &finished_deals[deal_num];
 }
 
-AssetStatus& ParseOlymptradeJSON::get_asset_status(int asset)
+//-----------------------------------------------------------------------------------------------
+
+const AssetStatus& ParseOlymptradeJSON::get_asset_status(int asset)
 {
   return assets_array[asset];
 }
 
 const std::string& ParseOlymptradeJSON::get_asset_name(int asset_num)
 {
-  return assets_names[asset_num];
+  return *(names.get_asset_name(asset_num));
 }
 
 //-----------------------------------------------------------------------------------------------
@@ -199,7 +302,7 @@ void ParseOlymptradeJSON::dump_update_data(FILE* file_dump_to)
 
   fprintf(file_dump_to, "balance: %lg; demo_balance: %lg\n", balance, demo_balance);
 
-  for(int i = 0; i < ASSETS_AMOUNT; i++)
+  for(int i = 0; i < assets_amount; i++)
   {
     fprintf(file_dump_to, "array place: [%d], sentiment [%d], winperc [%d], locked [%d]\n", i, assets_array[i].sentiment, assets_array[i].winperc, assets_array[i].locked);
   }
@@ -219,85 +322,8 @@ void ParseOlymptradeJSON::dump_bet_result_data(FILE* file_dump_to)
 {
   assert(file_dump_to);
 
-  for(int i = 0; i < ASSETS_AMOUNT; i++)
+  for(int i = 0; i < bets_new_status_counter; i++)
   {
     dump_asset_deal_struct(bet_status_response[i], file_dump_to);
   }
-}
-
-//-----------------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------------
-
-ParseOlymptradeJSON::ParseOlymptradeJSON()
-{
-  for(int i = 0; i < ASSETS_AMOUNT; i++)
-  {
-    assets_array[i] = {};
-  }
-
-  for(int i = 0; i < MAX_DEAL_AMOUNT; i++)
-  {
-    assets_array[i] = {};
-    current_deals[i] = {};
-    finished_deals[i] = {};
-    bet_status_response[i] = {};
-  }
-  balance = 0;
-  demo_balance = 0;
-  login_result = 0;
-  bets_new_status_counter = 0;
-}
-
-//-----------------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------------
-
-int ParseOlymptradeJSON::get_new_bet_status_amount()
-{
-  int returned_value = bets_new_status_counter;
-  return returned_value;
-}
-
-void ParseOlymptradeJSON::parse_bet_response_json(std::string input)
-{
-  bet_status_mutex.lock();
-
-  std::string in_error;
-  json11::Json in_json = json11::Json::parse((const char *)input.c_str(), in_error);
-
-  if (!in_error.empty()) 
-  {
-    printf("json '%s' parse error '%s', skipping\n", input.c_str(), in_error.c_str());
-  }
-  assert(in_json.is_object());
-
-  auto input_json = in_json.object_items();
-  assert(!input_json.empty());
-
-  bet_status_response[bets_new_status_counter].result = input_json["result"].bool_value();
-
-  if(bet_status_response[bets_new_status_counter].result == 1)
-  {
-    auto deal = input_json["deal"].object_items();
-    assert(!deal.empty());
-
-    parse_deals_data(deal, bet_status_response, bets_new_status_counter);
-  }
-  else
-    bet_status_response[bets_new_status_counter].amount = -1;
-
-  bets_new_status_counter++;
-
-  bet_status_mutex.unlock();
-}
-
-AssetDeal ParseOlymptradeJSON::get_deal_status(int num)
-{
-  if(bet_status_response[num].amount)
-    bets_new_status_counter--;
-
-  AssetDeal deal_to_return = bet_status_response[num];
-
-  bet_status_response[num] = {};  
-
-  return deal_to_return;
 }

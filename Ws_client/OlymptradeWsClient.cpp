@@ -4,8 +4,8 @@ static const int MAX_USERNAME_LENGTH  = 200;
 const int ASSETS_AMOUNT = 18;
 
 int ws_service_callback(struct lws* wsi_pointer,
-                           enum lws_callback_reasons reason, 
-                           void *user, void *in, size_t len)
+                        enum lws_callback_reasons reason, 
+                        void *user, void *in, size_t len)
 {
   OlymptradeWsClient* current_client = (OlymptradeWsClient*)user;
 
@@ -128,14 +128,16 @@ void OlymptradeWsClient::transmit_data(uint64_t current_timestamp, double price_
 
     if (rcv_result < 0)
     {
-	  printf("process %d asset %s  OlymptradeWsClient::transmit_data::", getpid(), current_asset_name -> c_str());
-	  fflush(stdout);
+  	  printf("process %d asset %s  OlymptradeWsClient::transmit_data::", getpid(), current_asset_name -> c_str());
+  	  fflush(stdout);
       perror("msgrcv");
     }
     else
     {
-      if(test_success.ready_to_recieve == true)
-        queue_connection_eastablished = 1;
+      queue_connection_eastablished = 1;
+
+      printf("\n\n\n\n\n\n\n\n\n\nprocess %d asset %s  OlymptradeWsClient::transmit_data::connection established", getpid(), current_asset_name -> c_str());
+      fflush(stdout);
     }
   }
 
@@ -249,8 +251,8 @@ OlymptradeWsClient::OlymptradeWsClient()
   queue_fd = 0;
   last = {};
 }
-
-int OlymptradeWsClient::run_client(std::string current_records_filename, int current_asset_num, std::string* asset_name, pid_t main_queue_fd)
+//std::string current_records_filename, int current_asset_num, std::string* asset_name, pid_t main_queue_fd -> in 1 struct
+int OlymptradeWsClient::run_client(std::string current_records_filename, int current_asset_num, const std::string* asset_name, pid_t main_queue_fd)
 {
   ws_command_queue_fd = main_queue_fd;  
   current_asset_number = current_asset_num;
@@ -273,7 +275,7 @@ int OlymptradeWsClient::run_client(std::string current_records_filename, int cur
 
   if(asset_name -> length())
   {
-    con_data.LoadSession(asset_name -> c_str(), records_filename.c_str());
+    con_data.load_session(asset_name -> c_str(), records_filename.c_str());
   }
   else
     return -1;

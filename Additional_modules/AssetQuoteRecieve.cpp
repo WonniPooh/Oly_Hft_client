@@ -1,5 +1,20 @@
 #include "AssetQuoteRecieve.h"
 
+AssetQuoteRecieve::AssetQuoteRecieve()
+{
+  asset = -1;
+  ping_recieved = 0;
+  asset_quote_queue_fd = 0;
+  current_quote = {};  
+
+  char current_username[quote_namespace::MAX_USERNAME_LENGTH] = {};
+  getlogin_r(current_username, quote_namespace::MAX_USERNAME_LENGTH);
+
+  std::string assets_file = std::string("/home/") + std::string(current_username) + quote_namespace::asset_names_filename;
+  names.load_asset_names(&assets_file);
+  assets_amount = names.get_assets_amount();
+}
+ 
 void AssetQuoteRecieve::open_quote_queue()
 { 
   key_t key;
@@ -55,14 +70,6 @@ void AssetQuoteRecieve::ping_connection()
   }
 } 
 
-AssetQuoteRecieve::AssetQuoteRecieve()
-{
-  asset = -1;
-  ping_recieved = 0;
-  asset_quote_queue_fd = 0;
-  current_quote = {};  
-}
-
 void AssetQuoteRecieve::update_quote()
 {
   if(asset == -1)
@@ -82,31 +89,31 @@ void AssetQuoteRecieve::update_quote()
 
     if (rcv_result < 0)
     {
-      printf("AssetQuoteRecieve:: Asset %s:: update_quote::error recieving msg\n", quote_namespace::assets_names[asset].c_str());
+      printf("AssetQuoteRecieve:: Asset %s:: update_quote::error recieving msg\n", names.get_asset_name(asset) -> c_str());
       perror("msgrcv");
     }
     else
     {
-      printf("AssetQuoteRecieve:: Asset %s:: update_quote::update msg successfully recieved\n", quote_namespace::assets_names[asset].c_str());
+      printf("AssetQuoteRecieve:: Asset %s:: update_quote::update msg successfully recieved\n", names.get_asset_name(asset) -> c_str());
     }
   }
   else  
   {
     if(!asset_quote_queue_fd)
-      printf("AssetQuoteRecieve:: queue connection closed; Can't update quote\n", quote_namespace::assets_names[asset].c_str());
+      printf("AssetQuoteRecieve:: queue connection closed; Can't update quote\n", names.get_asset_name(asset) -> c_str());
   }
 }
 
 void AssetQuoteRecieve::set_serviced_asset(int asset_set_num)
 {
-  if(asset == -1 && asset_set_num < quote_namespace::ASSETS_AMOUNT)
+  if(asset == -1 && asset_set_num < assets_amount)
   {
     asset = asset_set_num;
 
     char current_username[quote_namespace::MAX_USERNAME_LENGTH] = {};
     getlogin_r(current_username, quote_namespace::MAX_USERNAME_LENGTH);
 
-    quote_queue_file_pathname =  std::string("/home/") + std::string(current_username) + std::string("/") + quote_namespace::assets_names[asset];
+    quote_queue_file_pathname =  std::string("/home/") + std::string(current_username) + std::string("/") + *names.get_asset_name(asset);
 
     open_quote_queue();
     ping_connection();

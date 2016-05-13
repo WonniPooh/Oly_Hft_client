@@ -21,7 +21,7 @@ static const int WSCLIENT_MSG_RCV = 400;
 struct PthreadRoutineStruct 
 {
   char first_server_request[MAX_SERVER_REQUEST_LEN];
-  int is_there_first_request;
+  bool is_there_first_request;
   void* olymptrade_pointer;
 };
 
@@ -67,7 +67,7 @@ class OlymptradeWsClient
 		int connection_flag;
     int current_asset_number;
 		std::string current_statistics_file_pathname;
-    std::string* current_asset_name;
+    const std::string* current_asset_name;
     std::string queue_file_pathname;
     std::string records_filename;
 		FILE* stat_file;
@@ -93,6 +93,6 @@ class OlymptradeWsClient
 	public:
 
 		OlymptradeWsClient();
-		int run_client(std::string current_records_filename, int current_asset_num, std::string* asset_name, pid_t main_queue_fd);
+		int run_client(std::string current_records_filename, int current_asset_num, const std::string* asset_name, pid_t main_queue_fd);
 		void close_connection();
  };

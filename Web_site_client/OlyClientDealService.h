@@ -8,23 +8,20 @@
 #include <assert.h>
 #include <sys/msg.h>
 #include <inttypes.h>
+#include "AssetNames.h"
 #include "ParseOlymptradeJSON.h"
 
 namespace deals_namespace
 {
- const int PING_RESPONSE_CONSTANT         = 228;
+  const int PING_RESPONSE_CONSTANT        = 228;
   const int PING_CONSTANT                 = 322;
-  const int ASSETS_AMOUNT                 = 18;
   const int MAX_DEALS_OPEN                = 10;
   const int DEAL_STATUS_MTYPE             = 100;
   const int DEAL_RESULTS_MTYPE            = 200;
   const int NEW_DEAL_MTYPE                = 400;
   const int MAX_USERNAME_LENGTH           = 200;
-
-  const std::string assets_names[ASSETS_AMOUNT] = {"AUDUSD", "AUDUSD_OTC", "EURCHF", "EURJPY", "EURRUB", 
-                                                   "EURUSD", "EURUSD_OTC", "GBPUSD", "GBPUSD_OTC", "USDCAD", "USDCAD_OTC",
-                                                   "USDCHF", "USDCHF_OTC", "USDJPY", "USDJPY_OTC", "USDRUB", "XAGUSD", "XAUUSD"};
   
+  const std::string asset_names_filename = "/all_assets.txt";
   const std::string bets_result_status[2] = {"loose", "win"};
   
   struct NewBet
@@ -70,10 +67,12 @@ class OlyClientDealService
 {
   private:
 
+    AssetNames names;
     ParseOlymptradeJSON* parsed_deals_status;
     int ping_success;
     int asset_deals_queue_fd;
     int free_bet_array_positions_amount;
+    int assets_amount;
     std::string deals_queue_file_pathname;
   
     deals_namespace::NewBet bets_array[deals_namespace::MAX_DEALS_OPEN];
@@ -91,15 +90,15 @@ class OlyClientDealService
 
     void send_deal_status(deals_namespace::BetStatus* bet_status);
 
-    int find_asset_num(std::string* asset);
+    int find_asset_num(const std::string* asset);
 
-    int define_bet_id(AssetDeal* deal_to_serve);
+    int define_bet_id(const AssetDeal* deal_to_serve);
 
   public:
 
     void set_deals_status_json_handler(ParseOlymptradeJSON* parsed_deals_status);
 
-    std::vector<deals_namespace::NewBet> get_new_bets();                                    //make new bets
+    std::vector<deals_namespace::NewBet> get_new_bets();                  //make new bets
 
     void service_deal_status();                                           //deal status service
 

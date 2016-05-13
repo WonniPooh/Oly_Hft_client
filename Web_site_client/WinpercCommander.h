@@ -3,20 +3,16 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <unistd.h>
+#include "AssetNames.h"
 #include "ParseOlymptradeJSON.h"
 
 namespace winperc_namespace
 {
   const int MAX_USERNAME_LENGTH = 200;
-  const int ASSETS_AMOUNT = 18;
   const int recive_mtype = 500;
   const int status_changed_mtype = 2000;
   const int winperc_changed_mtype = 1000;
   const std::string status_queue_filename = "NEURO_ASSETS_STATUS";
-
-  const std::string assets_names[ASSETS_AMOUNT] = {"AUDUSD", "AUDUSD_OTC", "EURCHF", "EURJPY", "EURRUB", 
-                                                   "EURUSD", "EURUSD_OTC", "GBPUSD", "GBPUSD_OTC", "USDCAD", "USDCAD_OTC",
-                                                   "USDCHF", "USDCHF_OTC", "USDJPY", "USDJPY_OTC", "USDRUB", "XAGUSD", "XAUUSD"};
 
   struct ASSET_AVAILABLE
   {
@@ -50,22 +46,25 @@ class WinpercCommander
     int asset_status_queue_fd;                    
     int status_update_needed_count;
     int first_time_availability_called;
-    int status_ping_success[winperc_namespace::ASSETS_AMOUNT];
-    int status_update_needed[winperc_namespace::ASSETS_AMOUNT];
-    int asset_status[winperc_namespace::ASSETS_AMOUNT];
+    int* status_ping_success;
+    int* status_update_needed;
+    int* asset_status;
     std::string status_queue_file_pathname;
       
     int first_time_winperc_called;
     int winperc_update_needed_count;
-    int winperc_queue_fd[winperc_namespace::ASSETS_AMOUNT];
-    int winperc_status_changed[winperc_namespace::ASSETS_AMOUNT];
-    int winperc_ping_success[winperc_namespace::ASSETS_AMOUNT];
-    int winperc_update_needed[winperc_namespace::ASSETS_AMOUNT];
-    int asset_winperc[winperc_namespace::ASSETS_AMOUNT];
+    int* winperc_queue_fd;
+    int* winperc_status_changed;
+    int* winperc_ping_success;
+    int* winperc_update_needed;
+    int* asset_winperc;
     std::string asset_winperc_pathname_const;
 
+    int assets_amount;
+    AssetNames names;
     ParseOlymptradeJSON current;
     AssetStatus current_status;
+    const std::string asset_names_filename = "/all_assets.txt";
 
     void init_winperc_queue();
 

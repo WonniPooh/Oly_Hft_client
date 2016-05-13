@@ -184,6 +184,10 @@ OlyClientDealService::OlyClientDealService()
 
   open_deals_queue();
 
+  std::string assets_file = std::string("/home/") + std::string(current_username) + deals_namespace::asset_names_filename;
+  names.load_asset_names(&assets_file);
+  assets_amount = names.get_assets_amount();
+
   for(int i = 0; i < deals_namespace::MAX_DEALS_OPEN; i++)
   {
     bets_array[i] = {};
@@ -198,7 +202,7 @@ void OlyClientDealService::service_deal_status()
 
   for(int i = 0; i < new_status_amount; i++)
   {
-    AssetDeal deal_to_serve = parsed_deals_status -> get_deal_status(i);
+    AssetDeal deal_to_serve = parsed_deals_status -> get_deal_status();
     
     if(deal_to_serve.result)
     { 
@@ -233,7 +237,7 @@ void OlyClientDealService::service_deal_status()
   }
 }
 
-int OlyClientDealService::define_bet_id(AssetDeal* deal_to_serve)
+int OlyClientDealService::define_bet_id(const AssetDeal* deal_to_serve)
 {
   int asset = find_asset_num(&(deal_to_serve -> pair));
 
@@ -254,11 +258,11 @@ int OlyClientDealService::define_bet_id(AssetDeal* deal_to_serve)
   return -1;
 }
 
-int OlyClientDealService::find_asset_num(std::string* asset)
+int OlyClientDealService::find_asset_num(const std::string* asset)
 {
-  for(int i = 0; i < deals_namespace::ASSETS_AMOUNT; i++)
+  for(int i = 0; i < assets_amount; i++)
   {
-    if(deals_namespace::assets_names[i] == *asset)
+    if(*(names.get_asset_name(i)) == *asset)
       return i;
   }
 
@@ -273,7 +277,7 @@ void OlyClientDealService::update_deals(ParseOlymptradeJSON* parsed_data)
   static int prev_top_deal_id = 0;
   static int current_deal_id = 0;
   deals_namespace::DealResult deal_result_to_send = {};
-  AssetDeal* serviced_deal = NULL;
+  const AssetDeal* serviced_deal = NULL;
   int while_cycle_counter = 0;
   int bet_array_position = 0;
   bool deal_result = 0;

@@ -1,5 +1,41 @@
 #include "NeuroDealActions.h"
 
+NeuroDealAction::NeuroDealAction()
+{
+  for(int i = 0; i < 2 * deals_namespace::MAX_DEALS_OPEN; i++)
+  {
+    bets_array[i] = {};
+    bets_status_array[i] = {};
+    bets_results_array[i] = {};
+    bets_status_recieved_num[i] = 0;
+    bets_result_recieved_num[i] = 0;
+  }
+
+  ping_success = 0;
+  open_deals_amount = 0;
+  free_array_position = 0;
+  asset_deals_queue_fd = 0;
+  new_bets_status_amount = 0;
+  new_bets_result_amount = 0;
+
+  char current_username[deals_namespace::MAX_USERNAME_LENGTH] = {};
+  getlogin_r(current_username, deals_namespace::MAX_USERNAME_LENGTH);
+
+  deals_queue_file_pathname =  std::string("/home/") + std::string(current_username) + std::string("/NEURO_DEAL_ACTIONS");
+
+  std::string assets_file = std::string("/home/") + std::string(current_username) + deals_namespace::asset_names_filename;
+  names.load_asset_names(&assets_file);
+  assets_amount = names.get_assets_amount();
+
+  open_deals_queue();
+  ping_connection();
+}
+
+NeuroDealAction::~NeuroDealAction()
+{
+  close_deals_queue();
+}
+
 void NeuroDealAction::open_deals_queue()
 { 
   key_t key;
@@ -158,37 +194,6 @@ void NeuroDealAction::get_ping_answer()
     printf("NeuroDealAction::get_ping_answer::ping msg successfully recieved\n");
   }
 } 
-
-NeuroDealAction::NeuroDealAction()
-{
-  for(int i = 0; i < 2 * deals_namespace::MAX_DEALS_OPEN; i++)
-  {
-    bets_array[i] = {};
-    bets_status_array[i] = {};
-    bets_results_array[i] = {};
-    bets_status_recieved_num[i] = 0;
-    bets_result_recieved_num[i] = 0;
-  }
-
-  ping_success = 0;
-  open_deals_amount = 0;
-  free_array_position = 0;
-  asset_deals_queue_fd = 0;
-  new_bets_status_amount = 0;
-  new_bets_result_amount = 0;
-
-  char current_username[deals_namespace::MAX_USERNAME_LENGTH] = {};
-  getlogin_r(current_username, deals_namespace::MAX_USERNAME_LENGTH);
-
-  deals_queue_file_pathname =  std::string("/home/") + std::string(current_username) + std::string("/NEURO_DEAL_ACTIONS");
-  open_deals_queue();
-  ping_connection();
-}
-
-NeuroDealAction::~NeuroDealAction()
-{
-  close_deals_queue();
-}
 
 int NeuroDealAction::update_deals()
 {

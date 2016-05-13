@@ -213,7 +213,7 @@ wsclient::ConnectionData::ConnectionData()
   ssl_used = 0;
 }
 
-void wsclient::ConnectionData::LoadSession (std::string record_to_load, const char* filename_to_open)
+void wsclient::ConnectionData::load_session (std::string record_to_load, const char* filename_to_open)
 {
   if(!filename_to_open)
   {
@@ -238,7 +238,7 @@ void wsclient::ConnectionData::LoadSession (std::string record_to_load, const ch
   fclose(record_filename);
 }
 
-void wsclient::ConnectionData::CreateSession(wsclient::ParseCmdArgs args_parsed, char* file_to_record_in)
+void wsclient::ConnectionData::create_session(wsclient::ParseCmdArgs args_parsed, char* file_to_record_in)
 {
   const char *parsed_path_ptr = NULL;
   const char *server_address_char_array = NULL;
@@ -285,7 +285,7 @@ void wsclient::ConnectionData::CreateSession(wsclient::ParseCmdArgs args_parsed,
     record_iput_data(args_parsed.get_char_record_name(), file_to_record_in);
 }
 
-int wsclient::ConnectionData::is_there_query()
+bool wsclient::ConnectionData::is_there_query()
 {
   return is_there_first_query;
 }

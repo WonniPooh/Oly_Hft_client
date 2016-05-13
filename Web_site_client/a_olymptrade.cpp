@@ -1,5 +1,5 @@
 //TODO::investing.com signals handler
-//g++ a_olymptrade.cpp ParseOlymptradeJSON.cpp OlyClientDealService.cpp WinpercCommander.cpp WsClientCommander.cpp CurlOlymptradeActions.cpp json11/json11.cpp -std=c++11 -lcurl
+//g++ a_olymptrade.cpp ParseOlymptradeJSON.cpp OlyClientDealService.cpp WinpercCommander.cpp WsClientCommander.cpp CurlOlymptradeActions.cpp AssetNames.cpp json11/json11.cpp -std=c++11 -lcurl
 
 #include <cstdio>
 #include <cstdlib>
@@ -23,8 +23,6 @@
 //подключаем curl
 #include "curl/curl.h"
 #pragma comment(lib,"curllib.lib");
-
-const int ASSETS_AMOUNT = 18;
 
 size_t recieved_data_process(char *response_data, size_t size, size_t nmemb, void *user_func_args);
 void wait_time_left_before_next_update();
@@ -56,11 +54,6 @@ int main()
     deals_service.service_deal_status();
     
     bet_props = deals_service.get_new_bets();
-
-    printf("Bet amount:: %d\n\n\n\n", bet_props.size());
-
-    if(bet_props.size())
-      printf("%d %d %d %d %d\n\n", bet_props[0].bet_id, bet_props[0].asset, bet_props[0].direction, bet_props[0].deal_amount, bet_props[0].timeframe);
 
     curl_connection.send_requests(bet_props);
     

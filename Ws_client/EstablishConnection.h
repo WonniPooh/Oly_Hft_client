@@ -3,7 +3,7 @@
 #include <libwebsockets.h>
 #include "ConnectionData.h"
 
-static const int LWS_SERVICE_CALL_PERIOD = 10; //in milliseconds
+static const int LWS_SERVICE_POLL_PERIOD = 1000; //in milliseconds
 
 namespace wsclient
 {

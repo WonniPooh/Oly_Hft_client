@@ -1,5 +1,22 @@
 #include "AssetsStatusRecieve.h"
 
+AssetsStatusRecieve::AssetsStatusRecieve()
+{
+  asset = -1;
+  ping_recieved = 0;
+  asset_availability = 0;
+  asset_status_queue_fd = 0;
+
+  char current_username[assetstatus_namespace::MAX_USERNAME_LENGTH] = {};
+  getlogin_r(current_username, assetstatus_namespace::MAX_USERNAME_LENGTH);
+
+  status_queue_file_pathname =  std::string("/home/") + std::string(current_username) + std::string("/") + assetstatus_namespace::status_queue_filename;
+
+  std::string assets_file = std::string("/home/") + std::string(current_username) + assetstatus_namespace::asset_names_filename;
+  names.load_asset_names(&assets_file);
+  assets_amount = names.get_assets_amount();
+}
+
 void AssetsStatusRecieve::open_status_queue()
 { 
   key_t key;
@@ -53,19 +70,6 @@ void AssetsStatusRecieve::ping_connection()
   }
 } 
 
-AssetsStatusRecieve::AssetsStatusRecieve()
-{
-  asset = -1;
-  ping_recieved = 0;
-  asset_availability = 0;
-  asset_status_queue_fd = 0;
-
-  char current_username[assetstatus_namespace::MAX_USERNAME_LENGTH] = {};
-  getlogin_r(current_username, assetstatus_namespace::MAX_USERNAME_LENGTH);
-
-  status_queue_file_pathname =  std::string("/home/") + std::string(current_username) + std::string("/") + assetstatus_namespace::status_queue_filename;
-}
-
 void AssetsStatusRecieve::update_availability()
 {
   assetstatus_namespace::ASSET_AVAILABLE availability;
@@ -87,25 +91,25 @@ void AssetsStatusRecieve::update_availability()
 
     if (rcv_result < 0)
     {
-      printf("AssetsStatusRecieve:: Asset %s:: update_availability::error recieving msg\n", assetstatus_namespace::assets_names[asset].c_str());
+      printf("AssetsStatusRecieve:: Asset %s:: update_availability::error recieving msg\n", names.get_asset_name(asset) -> c_str());
       perror("msgrcv");
     }
     else
     {
-      printf("AssetsStatusRecieve:: Asset %s:: update_availability::update msg successfully recieved\n", assetstatus_namespace::assets_names[asset].c_str());
+      printf("AssetsStatusRecieve:: Asset %s:: update_availability::update msg successfully recieved\n", names.get_asset_name(asset) -> c_str());
       asset_availability = availability.available;
     }
   }
   else  
   {
     if(!asset_status_queue_fd)
-      printf("AssetsStatusRecieve:: queue connection closed; Can't update availability\n", assetstatus_namespace::assets_names[asset].c_str());
+      printf("AssetsStatusRecieve:: queue connection closed; Can't update availability\n", names.get_asset_name(asset) -> c_str());
   }
 }
 
 void AssetsStatusRecieve::set_serviced_asset(int asset_set_num)
 {
-  if(asset == -1 && asset_set_num < assetstatus_namespace::ASSETS_AMOUNT)
+  if(asset == -1 && asset_set_num < assets_amount)
   {
     asset = asset_set_num;
     open_status_queue();

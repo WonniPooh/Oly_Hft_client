@@ -45,7 +45,7 @@ void CurlOlymptradeActions::set_host_url(CURL* curl_handle, int request_type, de
   {
     current_url_configuration = bet_url_pattern_part_one + SSTR(bet_props -> deal_amount) + bet_url_pattern_part_two 
     + SSTR(bet_props -> timeframe) + bet_url_pattern_part_three + directions[bet_props -> direction] + bet_url_pattern_part_four 
-    + assets_names[bet_props -> asset] + bet_url_pattern_part_five;
+    + *(names.get_asset_name(bet_props -> asset)) + bet_url_pattern_part_five;
   }
   else if(LOG_OUT == request_type)
   {
@@ -167,6 +167,12 @@ CurlOlymptradeActions::CurlOlymptradeActions()
   login_headers = NULL;
   logout_headers = NULL;
   status_update_headers = NULL;
+
+  char current_username[/*MAX_USERNAME_LENGTH*/200] = {};
+  getlogin_r(current_username, 200);
+
+  std::string assets_file = std::string("/home/") + std::string(current_username) + asset_names_filename;
+  names.load_asset_names(&assets_file);
 }
 
 CurlOlymptradeActions::~CurlOlymptradeActions()
@@ -234,6 +240,7 @@ void CurlOlymptradeActions::log_into_platform(std::string login, std::string pas
 void CurlOlymptradeActions::send_requests(std::vector<deals_namespace::NewBet> bet_props) 
 { 
   static int count = 0;
+  unsigned int milisec = 1000;
 
   if(!curl_bet_handle[0])
     init_bet_handle();     
@@ -255,11 +262,6 @@ void CurlOlymptradeActions::send_requests(std::vector<deals_namespace::NewBet> b
 
   if(num_bet)
   {
-    printf("THERE IS A BET\n");
-
-
-    sleep(5);
-
     for(int i = 0; i < num_bet; i++)
     {
       set_host_url(curl_bet_handle[i], MAKE_A_BET, &bet_props[i]);
@@ -273,6 +275,8 @@ void CurlOlymptradeActions::send_requests(std::vector<deals_namespace::NewBet> b
 
     if(handle_count == 0)
       break;
+
+    usleep(10 * milisec);   
   }       
 
   curl_multi_remove_handle(multi_handle, curl_status_handle);

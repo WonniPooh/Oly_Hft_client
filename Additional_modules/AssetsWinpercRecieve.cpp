@@ -1,5 +1,20 @@
 #include "AssetsWinpercRecieve.h"
 
+AssetsWinpercRecieve::AssetsWinpercRecieve()
+{
+  asset = -1;
+  ping_recieved = 0;
+  asset_winperc = 0;
+  asset_winperc_queue_fd = 0;
+
+  char current_username[assetwinperc_namespace::MAX_USERNAME_LENGTH] = {};
+  getlogin_r(current_username, assetwinperc_namespace::MAX_USERNAME_LENGTH);
+
+  std::string assets_file = std::string("/home/") + std::string(current_username) + assetwinperc_namespace::asset_names_filename;
+  names.load_asset_names(&assets_file);
+  assets_amount = names.get_assets_amount();
+}
+
 void AssetsWinpercRecieve::open_winperc_queue()
 { 
   key_t key;
@@ -54,14 +69,6 @@ void AssetsWinpercRecieve::ping_connection()
   }
 } 
 
-AssetsWinpercRecieve::AssetsWinpercRecieve()
-{
-  asset = -1;
-  ping_recieved = 0;
-  asset_winperc = 0;
-  asset_winperc_queue_fd = 0;
-}
-
 void AssetsWinpercRecieve::update_winperc()
 {
   assetwinperc_namespace::ASSET_WINPERC win_percentage;
@@ -83,32 +90,32 @@ void AssetsWinpercRecieve::update_winperc()
 
     if (rcv_result < 0)
     {
-      printf("AssetsWinpercRecieve:: Asset %s:: update_winperc::error recieving msg\n", assetwinperc_namespace::assets_names[asset].c_str());
+      printf("AssetsWinpercRecieve:: Asset %s:: update_winperc::error recieving msg\n", names.get_asset_name(asset) -> c_str());
       perror("msgrcv");
     }
     else
     {
-      printf("AssetsWinpercRecieve:: Asset %s:: update_winperc::update msg successfully recieved\n", assetwinperc_namespace::assets_names[asset].c_str());
+      printf("AssetsWinpercRecieve:: Asset %s:: update_winperc::update msg successfully recieved\n", names.get_asset_name(asset) -> c_str());
       asset_winperc = win_percentage.winperc;
     }
   }
   else  
   {
     if(!asset_winperc_queue_fd)
-      printf("AssetsWinpercRecieve:: queue connection closed; Can't update availability\n", assetwinperc_namespace::assets_names[asset].c_str());
+      printf("AssetsWinpercRecieve:: queue connection closed; Can't update availability\n", names.get_asset_name(asset) -> c_str());
   }
 }
 
 void AssetsWinpercRecieve::set_serviced_asset(int asset_set_num)
 {
-  if(asset == -1 && asset_set_num < assetwinperc_namespace::ASSETS_AMOUNT)
+  if(asset == -1 && asset_set_num < assets_amount)
   {
     asset = asset_set_num;
     
     char current_username[assetwinperc_namespace::MAX_USERNAME_LENGTH] = {};
     getlogin_r(current_username, assetwinperc_namespace::MAX_USERNAME_LENGTH);
 
-    winperc_queue_file_pathname = std::string("/home/") + std::string(current_username) + std::string("/") + assetwinperc_namespace::assets_names[asset];
+    winperc_queue_file_pathname = std::string("/home/") + std::string(current_username) + std::string("/") + *names.get_asset_name(asset);
     open_winperc_queue();
     ping_connection();
   }

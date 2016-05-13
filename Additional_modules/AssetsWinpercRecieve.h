@@ -6,17 +6,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include "AssetNames.h"
 
 namespace assetwinperc_namespace
 {
-  const int ASSETS_AMOUNT = 18;
   const int recive_mtype = 500;
   const int MAX_USERNAME_LENGTH = 200;
   const int winperc_changed_mtype = 1000;
-  
-  const std::string assets_names[ASSETS_AMOUNT] = {"AUDUSD", "AUDUSD_OTC", "EURCHF", "EURJPY", "EURRUB", 
-                                                   "EURUSD", "EURUSD_OTC", "GBPUSD", "GBPUSD_OTC", "USDCAD", "USDCAD_OTC",
-                                                   "USDCHF", "USDCHF_OTC", "USDJPY", "USDJPY_OTC", "USDRUB", "XAGUSD", "XAUUSD"};
+  const std::string asset_names_filename = "/all_assets.txt";
 
   struct ASSET_WINPERC
   {
@@ -42,6 +39,8 @@ class AssetsWinpercRecieve
   private:
   	int asset;
     int ping_recieved;
+    int assets_amount;
+    AssetNames names;
     uint16_t asset_winperc;
     int asset_winperc_queue_fd;
     std::string winperc_queue_file_pathname;
