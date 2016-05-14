@@ -11,6 +11,7 @@
 #include "curl/curl.h"
 #include <vector>
 #include <unistd.h>
+#include "SysStructs.h"
 #include "AssetNames.h"
 #include "OlyClientDealService.h"
 #pragma comment(lib,"curllib.lib")
@@ -31,9 +32,6 @@ class CurlOlymptradeActions
 {
   private:
     
-    const std::string asset_names_filename = "/all_assets.txt";
-    static const int MAX_DEAL_AMOUNT = 10;
-
     AssetNames names;
     int log_in_success;
 
@@ -89,7 +87,7 @@ class CurlOlymptradeActions
     //функция конвертации string char в url string (%XX)
     std::string url_encode(CURL* curl, const std::string& text);
 
-    void set_host_url(CURL* curl_handle, int request_type, deals_namespace::NewBet* bet_props);
+    void set_host_url(CURL* curl_handle, int request_type, deal_structs::NewDeal* bet_props);
 
     void init_bet_handle();
 
@@ -110,7 +108,7 @@ class CurlOlymptradeActions
 
     void log_into_platform(std::string login, std::string password, size_t responce_data_process(char *, size_t, size_t, void*), OlyClientDealService* deals_service);
 
-    void send_requests(std::vector<deals_namespace::NewBet> bet_props); 
+    void send_requests(std::vector<deal_structs::NewDeal> bet_props); 
 
     void switch_to_demo();
 

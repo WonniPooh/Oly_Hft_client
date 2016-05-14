@@ -7,11 +7,11 @@ AssetQuoteRecieve::AssetQuoteRecieve()
   asset_quote_queue_fd = 0;
   current_quote = {};  
 
-  char current_username[quote_namespace::MAX_USERNAME_LENGTH] = {};
-  getlogin_r(current_username, quote_namespace::MAX_USERNAME_LENGTH);
+  char current_username[MAX_USERNAME_LENGTH] = {};
+  getlogin_r(current_username, MAX_USERNAME_LENGTH);
 
-  std::string assets_file = std::string("/home/") + std::string(current_username) + quote_namespace::asset_names_filename;
-  names.load_asset_names(&assets_file);
+  std::string assets_filepath = std::string("/home/") + std::string(current_username) + asset_names_filename;
+  names.load_asset_names(&assets_filepath);
   assets_amount = names.get_assets_amount();
 }
  
@@ -45,9 +45,9 @@ void AssetQuoteRecieve::close_quote_queue()
 
 void AssetQuoteRecieve::ping_connection()
 {
-  quote_namespace::PingConnection recieved_ping = {};
+  ping_structs::PingConnection recieved_ping = {};
 
-  int rcv_result = msgrcv(asset_quote_queue_fd, (quote_namespace::PingConnection*) &recieved_ping, sizeof(recieved_ping) - sizeof(long), quote_namespace::WSCLIENT_MSG_TYPE, IPC_NOWAIT);
+  int rcv_result = msgrcv(asset_quote_queue_fd, (ping_structs::PingConnection*) &recieved_ping, sizeof(recieved_ping) - sizeof(long), WSCLIENT_QUOTE_MTYPE, IPC_NOWAIT);
 
   if (rcv_result < 0)
   {
@@ -59,11 +59,11 @@ void AssetQuoteRecieve::ping_connection()
     ping_recieved = 1;
     printf("AssetQuoteRecieve::ping connection::ping msg successfully recieved\n");    
 
-    quote_namespace::PingResult ping = {};
-    ping.mtype = quote_namespace::WSCLIENT_MSG_RCV;
-    ping.ready_to_recieve = recieved_ping.asset;
+    ping_structs::PingResult ping = {};
+    ping.mtype = WSCLIENT_PING_MSG_RESPONSE;
+    ping.ready_to_recieve = recieved_ping.ping_data;
 
-    if(msgsnd(asset_quote_queue_fd, (quote_namespace::PingResult*) &ping, sizeof(ping) - sizeof(long), 0) < 0)
+    if(msgsnd(asset_quote_queue_fd, (ping_structs::PingResult*) &ping, sizeof(ping) - sizeof(long), 0) < 0)
     {
       printf("AssetQuoteRecieve::Can\'t respond to ping message\n");
     }  
@@ -85,7 +85,7 @@ void AssetQuoteRecieve::update_quote()
   {
     current_quote = {};
 
-    int rcv_result = msgrcv(asset_quote_queue_fd, (quote_namespace::RecieveData*) &current_quote, sizeof(current_quote) - sizeof(long), quote_namespace::WSCLIENT_MSG_TYPE, IPC_NOWAIT);
+    int rcv_result = msgrcv(asset_quote_queue_fd, (NewQuoteMsg*) &current_quote, sizeof(current_quote) - sizeof(long), WSCLIENT_QUOTE_MTYPE, IPC_NOWAIT);
 
     if (rcv_result < 0)
     {
@@ -110,8 +110,8 @@ void AssetQuoteRecieve::set_serviced_asset(int asset_set_num)
   {
     asset = asset_set_num;
 
-    char current_username[quote_namespace::MAX_USERNAME_LENGTH] = {};
-    getlogin_r(current_username, quote_namespace::MAX_USERNAME_LENGTH);
+    char current_username[MAX_USERNAME_LENGTH] = {};
+    getlogin_r(current_username, MAX_USERNAME_LENGTH);
 
     quote_queue_file_pathname =  std::string("/home/") + std::string(current_username) + std::string("/") + *names.get_asset_name(asset);
 
@@ -124,7 +124,7 @@ void AssetQuoteRecieve::set_serviced_asset(int asset_set_num)
   }
 }
 
-const quote_namespace::RecieveData* AssetQuoteRecieve::get_quote()
+const NewQuoteMsg* AssetQuoteRecieve::get_quote()
 {
   if(asset == -1)
   {

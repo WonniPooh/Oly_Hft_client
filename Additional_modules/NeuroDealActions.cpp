@@ -2,7 +2,7 @@
 
 NeuroDealAction::NeuroDealAction()
 {
-  for(int i = 0; i < 2 * deals_namespace::MAX_DEALS_OPEN; i++)
+  for(int i = 0; i < 2 * MAX_DEAL_AMOUNT; i++)
   {
     bets_array[i] = {};
     bets_status_array[i] = {};
@@ -18,13 +18,13 @@ NeuroDealAction::NeuroDealAction()
   new_bets_status_amount = 0;
   new_bets_result_amount = 0;
 
-  char current_username[deals_namespace::MAX_USERNAME_LENGTH] = {};
-  getlogin_r(current_username, deals_namespace::MAX_USERNAME_LENGTH);
+  char current_username[MAX_USERNAME_LENGTH] = {};
+  getlogin_r(current_username, MAX_USERNAME_LENGTH);
 
   deals_queue_file_pathname =  std::string("/home/") + std::string(current_username) + std::string("/NEURO_DEAL_ACTIONS");
 
-  std::string assets_file = std::string("/home/") + std::string(current_username) + deals_namespace::asset_names_filename;
-  names.load_asset_names(&assets_file);
+  std::string assets_filepath = std::string("/home/") + std::string(current_username) + asset_names_filename;
+  names.load_asset_names(&assets_filepath);
   assets_amount = names.get_assets_amount();
 
   open_deals_queue();
@@ -76,9 +76,9 @@ int NeuroDealAction::recieve_status()
     while(1)
     {
       int bet_num = -1;
-      deals_namespace::BetStatus bet_status = {};
+      deal_structs::DealStatus bet_status = {};
 
-      int rcv_result = msgrcv(asset_deals_queue_fd, (deals_namespace::BetStatus*) &bet_status, sizeof(bet_status) - sizeof(long), deals_namespace::DEAL_STATUS_MTYPE, IPC_NOWAIT);
+      int rcv_result = msgrcv(asset_deals_queue_fd, (deal_structs::DealStatus*) &bet_status, sizeof(bet_status) - sizeof(long), DEAL_STATUS_MTYPE, IPC_NOWAIT);
 
       if (rcv_result < 0)
       {
@@ -88,7 +88,7 @@ int NeuroDealAction::recieve_status()
       }
       else
       {
-        for(int i = 0; i < 2*deals_namespace::MAX_DEALS_OPEN; i++)
+        for(int i = 0; i < 2*MAX_DEAL_AMOUNT; i++)
         {
           if(bets_array[i].bet_id == bet_status.bet_id)
           {
@@ -127,9 +127,9 @@ int NeuroDealAction::recieve_results()
     while(1)
     {
       int bet_num = -1;
-      deals_namespace::DealResult deal_result = {};
+      deal_structs::DealResult deal_result = {};
 
-      int rcv_result = msgrcv(asset_deals_queue_fd, (deals_namespace::DealResult*) &deal_result, sizeof(deal_result) - sizeof(long), deals_namespace::DEAL_RESULTS_MTYPE, IPC_NOWAIT);
+      int rcv_result = msgrcv(asset_deals_queue_fd, (deal_structs::DealResult*) &deal_result, sizeof(deal_result) - sizeof(long), DEAL_RESULTS_MTYPE, IPC_NOWAIT);
 
       if (rcv_result < 0)
       {
@@ -139,7 +139,7 @@ int NeuroDealAction::recieve_results()
       }
       else
       {
-        for(int i = 0; i < 2 * deals_namespace::MAX_DEALS_OPEN; i++)
+        for(int i = 0; i < 2 * MAX_DEAL_AMOUNT; i++)
         {
           if(bets_array[i].bet_id == deal_result.bet_id)
           {
@@ -166,9 +166,9 @@ int NeuroDealAction::recieve_results()
 
 void NeuroDealAction::ping_connection()
 {
-  deals_namespace::PingConnection ping = {deals_namespace::PING_CONSTANT, deals_namespace::PING_CONSTANT};
+  ping_structs::PingConnection ping = {DEAL_SERVICE_PING_MTYPE, DEAL_SERVICE_PING_MTYPE};
 
-  if(msgsnd(asset_deals_queue_fd, (deals_namespace::PingConnection*) &ping, sizeof(deals_namespace::PingConnection) - sizeof(long), 0) < 0)
+  if(msgsnd(asset_deals_queue_fd, (ping_structs::PingConnection*) &ping, sizeof(ping_structs::PingConnection) - sizeof(long), 0) < 0)
   {
     printf("NeuroDealAction::Can\'t send ping message to queue\n");
     perror("msgsnd");
@@ -179,9 +179,9 @@ void NeuroDealAction::ping_connection()
 
 void NeuroDealAction::get_ping_answer()
 {
-  deals_namespace::PingResult ping_result = {};
+  ping_structs::PingResult ping_result = {};
 
-  int rcv_result = msgrcv(asset_deals_queue_fd, (deals_namespace::PingConnection*) &ping_result, sizeof(ping_result) - sizeof(long), deals_namespace::PING_RESPONSE_CONSTANT, IPC_NOWAIT);
+  int rcv_result = msgrcv(asset_deals_queue_fd, (ping_structs::PingConnection*) &ping_result, sizeof(ping_result) - sizeof(long), DEAL_SERVICE_RESPONCE_PING_MTYPE, IPC_NOWAIT);
 
   if (rcv_result < 0)
   {
@@ -204,14 +204,14 @@ int NeuroDealAction::update_deals()
   return !!is_there_smth_new;
 }
 
-int NeuroDealAction::make_new_bet(const std::vector<deals_namespace::NewBet>& bets_vector)
+int NeuroDealAction::make_new_bet(const std::vector<deal_structs::NewDeal>& bets_vector)
 {
   if(!ping_success)
     get_ping_answer();
 
   int msg_sent_counter = 0;
 
-  deals_namespace::NewBet current_bet = {};
+  deal_structs::NewDeal current_bet = {};
 
   if(ping_success)
   {
@@ -220,9 +220,9 @@ int NeuroDealAction::make_new_bet(const std::vector<deals_namespace::NewBet>& be
 
       bets_array[free_array_position] = bets_vector[i];
 
-      bets_array[free_array_position].mtype = deals_namespace::NEW_DEAL_MTYPE;
+      bets_array[free_array_position].mtype = NEW_DEAL_MTYPE;
 
-      if(msgsnd(asset_deals_queue_fd, (deals_namespace::NewBet*) &bets_array[free_array_position], sizeof(deals_namespace::NewBet) - sizeof(long), 0) < 0)
+      if(msgsnd(asset_deals_queue_fd, (deal_structs::NewDeal*) &bets_array[free_array_position], sizeof(deal_structs::NewDeal) - sizeof(long), 0) < 0)
       {
         printf("NeuroDealAction::make_new_bet::Can\'t send bet message with id %d to queue\n", bets_array[free_array_position].bet_id);
         perror("msgsnd");
@@ -233,7 +233,7 @@ int NeuroDealAction::make_new_bet(const std::vector<deals_namespace::NewBet>& be
         printf("NeuroDealAction::Bet msg with id %d successfully sent\n", bets_array[free_array_position].bet_id);
       }
 
-      free_array_position = (free_array_position + 1) % (2 * deals_namespace::MAX_DEALS_OPEN);
+      free_array_position = (free_array_position + 1) % (2 * MAX_DEAL_AMOUNT);
     }
   }
   else
@@ -245,9 +245,9 @@ int NeuroDealAction::make_new_bet(const std::vector<deals_namespace::NewBet>& be
   return msg_sent_counter;
 }
 
-const std::vector<deals_namespace::BetStatus>& NeuroDealAction::get_updated_status()
+const std::vector<deal_structs::DealStatus>& NeuroDealAction::get_updated_status()
 {
-  static std::vector<deals_namespace::BetStatus> status_to_return;
+  static std::vector<deal_structs::DealStatus> status_to_return;
   status_to_return.clear();
 
   for(int i = 0; i < new_bets_status_amount; i++)
@@ -260,9 +260,9 @@ const std::vector<deals_namespace::BetStatus>& NeuroDealAction::get_updated_stat
   return status_to_return;
 }
 
-const std::vector<deals_namespace::DealResult>& NeuroDealAction::get_updated_results()
+const std::vector<deal_structs::DealResult>& NeuroDealAction::get_updated_results()
 {
-  static std::vector<deals_namespace::DealResult> results_to_return;
+  static std::vector<deal_structs::DealResult> results_to_return;
   results_to_return.clear();
 
   for(int i = 0; i < new_bets_result_amount; i++)

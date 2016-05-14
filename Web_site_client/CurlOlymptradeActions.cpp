@@ -23,7 +23,7 @@ std::string CurlOlymptradeActions::url_encode(CURL* curl, const std::string& tex
   return result;
 }
 
-void CurlOlymptradeActions::set_host_url(CURL* curl_handle, int request_type, deals_namespace::NewBet* bet_props)
+void CurlOlymptradeActions::set_host_url(CURL* curl_handle, int request_type, deal_structs::NewDeal* bet_props)
 {
   assert(curl_handle);
   
@@ -171,8 +171,8 @@ CurlOlymptradeActions::CurlOlymptradeActions()
   char current_username[/*MAX_USERNAME_LENGTH*/200] = {};
   getlogin_r(current_username, 200);
 
-  std::string assets_file = std::string("/home/") + std::string(current_username) + asset_names_filename;
-  names.load_asset_names(&assets_file);
+  std::string assets_filepath = std::string("/home/") + std::string(current_username) + asset_names_filename;
+  names.load_asset_names(&assets_filepath);
 }
 
 CurlOlymptradeActions::~CurlOlymptradeActions()
@@ -237,7 +237,7 @@ void CurlOlymptradeActions::log_into_platform(std::string login, std::string pas
   }
 }
 
-void CurlOlymptradeActions::send_requests(std::vector<deals_namespace::NewBet> bet_props) 
+void CurlOlymptradeActions::send_requests(std::vector<deal_structs::NewDeal> bet_props) 
 { 
   static int count = 0;
   unsigned int milisec = 1000;

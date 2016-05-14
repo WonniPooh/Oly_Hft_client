@@ -34,7 +34,7 @@ void WsClientCommander::delete_queue()       //TODO::delete file or not
 
 void WsClientCommander::send_message()
 {
-  if(msgsnd(ws_queue_fd, (ws_namespace::MsgBufWsCreateNewConnection*) &connection_actions, sizeof(ws_namespace::MsgBufWsCreateNewConnection) - sizeof(long), 0) < 0)
+  if(msgsnd(ws_queue_fd, (MsgBufWsCreateNewConnection*) &connection_actions, sizeof(MsgBufWsCreateNewConnection) - sizeof(long), 0) < 0)
   {
     printf("Can\'t send message to queue\n");
     perror("msgsnd");
@@ -45,9 +45,9 @@ void WsClientCommander::send_message()
 
 void WsClientCommander::send_ping_msg()
 {
-  ws_namespace::PingConnection ping = {1, ws_namespace::PING_MTYPE};
+  ping_structs::PingConnection ping = {1, WS_CLIENT_COMMANDER_PING_MTYPE};
 
-  if(msgsnd(ws_queue_fd, (ws_namespace::PingConnection*) &ping, sizeof(ping) - sizeof(long), 0) < 0)
+  if(msgsnd(ws_queue_fd, (ping_structs::PingConnection*) &ping, sizeof(ping) - sizeof(long), 0) < 0)
   {
     printf("WsClientCommander::send_ping_msg:: Can\'t send message to queue\n");
     perror("msgsnd");
@@ -58,9 +58,9 @@ void WsClientCommander::send_ping_msg()
 
 void WsClientCommander::recieve_ping_response()
 {
-  ws_namespace::PingResult ping_result;
+  ping_structs::PingResult ping_result;
 
-  int rcv_result = msgrcv(ws_queue_fd, (ws_namespace::PingResult*) &ping_result, sizeof(ping_result) - sizeof(long), ws_namespace::PING_MTYPE, IPC_NOWAIT);
+  int rcv_result = msgrcv(ws_queue_fd, (ping_structs::PingResult*) &ping_result, sizeof(ping_result) - sizeof(long), WS_CLIENT_COMMANDER_PING_MTYPE, IPC_NOWAIT);
 
   if (rcv_result < 0)
   {
@@ -78,7 +78,7 @@ void WsClientCommander::recieve_ping_response()
 
 void WsClientCommander::recieve_asset_close_msg()
 {
-  ws_namespace::ConnectionClosedMsg asset_connection = {};
+  ConnectionClosedMsg asset_connection = {};
 
   if(!connection_opened)
     recieve_ping_response();
@@ -87,7 +87,7 @@ void WsClientCommander::recieve_asset_close_msg()
   {
     while(1)
     {
-      int rcv_result = msgrcv(ws_queue_fd, (ws_namespace::ConnectionClosedMsg*) &asset_connection, sizeof(asset_connection) - sizeof(long), ws_namespace::ASSET_CLOSED_MTYPE, IPC_NOWAIT);
+      int rcv_result = msgrcv(ws_queue_fd, (ConnectionClosedMsg*) &asset_connection, sizeof(asset_connection) - sizeof(long), ASSET_CLOSED_MTYPE, IPC_NOWAIT);
 
       if (rcv_result < 0)
       {
@@ -121,17 +121,17 @@ WsClientCommander::WsClientCommander()
   prev_status = {};
   current_status = {};
   connection_actions = {};
-  connection_actions.msgtyp = 1;
+  connection_actions.mtype = 1;
   ws_queue_fd = 0;
   connection_opened = 0;
 
-  char current_username[ws_namespace::MAX_USERNAME_LENGTH] = {};
-  getlogin_r(current_username, ws_namespace::MAX_USERNAME_LENGTH);
+  char current_username[MAX_USERNAME_LENGTH] = {};
+  getlogin_r(current_username, MAX_USERNAME_LENGTH);
 
-  queue_file_pathname = std::string("/home/") + std::string(current_username) + ws_namespace::queue_filename;
+  queue_file_pathname = std::string("/home/") + std::string(current_username) + ws_queue_filename;
   queue_get_access();
-  std::string assets_file = std::string("/home/") + std::string(current_username) + ws_namespace::asset_names_filename;
-  names.load_asset_names(&assets_file);
+  std::string assets_filepath = std::string("/home/") + std::string(current_username) + asset_names_filename;
+  names.load_asset_names(&assets_filepath);
   assets_amount = names.get_assets_amount();
 }
 

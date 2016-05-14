@@ -10,8 +10,8 @@ ParseOlymptradeJSON::ParseOlymptradeJSON()
   char current_username[200] = {};          //TODO global const
   getlogin_r(current_username, 200);
 
-  std::string assets_file = std::string("/home/") + std::string(current_username) + asset_names_filename; //TODO const asset_names_filename
-  names.load_asset_names(&assets_file);
+  std::string assets_filepath = std::string("/home/") + std::string(current_username) + asset_names_filename; //TODO const asset_names_filename
+  names.load_asset_names(&assets_filepath);
   assets_amount = names.get_assets_amount();
 
   for(int i = 0; i < assets_amount; i++)

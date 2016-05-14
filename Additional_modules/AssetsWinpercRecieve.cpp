@@ -4,14 +4,14 @@ AssetsWinpercRecieve::AssetsWinpercRecieve()
 {
   asset = -1;
   ping_recieved = 0;
-  asset_winperc = 0;
+  AssetWinperc = 0;
   asset_winperc_queue_fd = 0;
 
-  char current_username[assetwinperc_namespace::MAX_USERNAME_LENGTH] = {};
-  getlogin_r(current_username, assetwinperc_namespace::MAX_USERNAME_LENGTH);
+  char current_username[MAX_USERNAME_LENGTH] = {};
+  getlogin_r(current_username, MAX_USERNAME_LENGTH);
 
-  std::string assets_file = std::string("/home/") + std::string(current_username) + assetwinperc_namespace::asset_names_filename;
-  names.load_asset_names(&assets_file);
+  std::string assets_filepath = std::string("/home/") + std::string(current_username) + asset_names_filename;
+  names.load_asset_names(&assets_filepath);
   assets_amount = names.get_assets_amount();
 }
 
@@ -43,9 +43,9 @@ void AssetsWinpercRecieve::close_winperc_queue()
 
 void AssetsWinpercRecieve::ping_connection()
 {
-  assetwinperc_namespace::PingConnection recieved_ping = {};
+  ping_structs::PingConnection recieved_ping = {};
 
-  int rcv_result = msgrcv(asset_winperc_queue_fd, (assetwinperc_namespace::PingConnection*) &recieved_ping, sizeof(recieved_ping) - sizeof(long), assetwinperc_namespace::winperc_changed_mtype, IPC_NOWAIT);
+  int rcv_result = msgrcv(asset_winperc_queue_fd, (ping_structs::PingConnection*) &recieved_ping, sizeof(recieved_ping) - sizeof(long), WINPERC_COMMANDER_WINPERC_CHANGED_MTYPE, IPC_NOWAIT);
 
   if (rcv_result < 0)
   {
@@ -58,11 +58,11 @@ void AssetsWinpercRecieve::ping_connection()
 
     ping_recieved = 1;
 
-    assetwinperc_namespace::PingResult ping = {};
-    ping.mtype = recieved_ping.accept_msgtype;
+    ping_structs::PingResult ping = {};
+    ping.mtype = recieved_ping.ping_data;
     ping.ready_to_recieve  = 1;
 
-    if(msgsnd(asset_winperc_queue_fd, (assetwinperc_namespace::PingResult*) &ping, sizeof(ping) - sizeof(long), 0) < 0)
+    if(msgsnd(asset_winperc_queue_fd, (ping_structs::PingResult*) &ping, sizeof(ping) - sizeof(long), 0) < 0)
     {
       printf("AssetsWinpercRecieve::Can\'t respond to ping message\n");
     }  
@@ -71,7 +71,7 @@ void AssetsWinpercRecieve::ping_connection()
 
 void AssetsWinpercRecieve::update_winperc()
 {
-  assetwinperc_namespace::ASSET_WINPERC win_percentage;
+  status_structs::AssetWinperc win_percentage;
 
   if(asset == -1)
   {
@@ -86,7 +86,7 @@ void AssetsWinpercRecieve::update_winperc()
   {
     win_percentage = {};
 
-    int rcv_result = msgrcv(asset_winperc_queue_fd, (assetwinperc_namespace::ASSET_WINPERC*) &win_percentage, sizeof(win_percentage) - sizeof(long), assetwinperc_namespace::winperc_changed_mtype, IPC_NOWAIT);
+    int rcv_result = msgrcv(asset_winperc_queue_fd, (status_structs::AssetWinperc*) &win_percentage, sizeof(win_percentage) - sizeof(long), WINPERC_COMMANDER_WINPERC_CHANGED_MTYPE, IPC_NOWAIT);
 
     if (rcv_result < 0)
     {
@@ -96,7 +96,7 @@ void AssetsWinpercRecieve::update_winperc()
     else
     {
       printf("AssetsWinpercRecieve:: Asset %s:: update_winperc::update msg successfully recieved\n", names.get_asset_name(asset) -> c_str());
-      asset_winperc = win_percentage.winperc;
+      AssetWinperc = win_percentage.winperc;
     }
   }
   else  
@@ -112,8 +112,8 @@ void AssetsWinpercRecieve::set_serviced_asset(int asset_set_num)
   {
     asset = asset_set_num;
     
-    char current_username[assetwinperc_namespace::MAX_USERNAME_LENGTH] = {};
-    getlogin_r(current_username, assetwinperc_namespace::MAX_USERNAME_LENGTH);
+    char current_username[MAX_USERNAME_LENGTH] = {};
+    getlogin_r(current_username, MAX_USERNAME_LENGTH);
 
     winperc_queue_file_pathname = std::string("/home/") + std::string(current_username) + std::string("/") + *names.get_asset_name(asset);
     open_winperc_queue();
@@ -134,7 +134,7 @@ uint16_t AssetsWinpercRecieve::get_winperc()
   }
 
   if(ping_recieved)
-    return asset_winperc;
+    return AssetWinperc;
   else
   {
     printf("Ping msg does not recieved! No data to return\n");

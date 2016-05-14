@@ -7,59 +7,8 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <inttypes.h>
+#include "SysStructs.h"
 #include "AssetNames.h"
-
-namespace deals_namespace
-{
-  const int MAX_DEALS_OPEN      					= 10;
-  const int PING_RESPONSE_CONSTANT        = 228;
-  const int PING_CONSTANT                 = 322;
-  const int DEAL_STATUS_MTYPE   					= 100;
-  const int DEAL_RESULTS_MTYPE  					= 200;
-  const int NEW_DEAL_MTYPE      					= 400;
-  const int MAX_USERNAME_LENGTH 					= 200;
-  const std::string asset_names_filename = "/all_assets.txt";
-
-
- 
-  struct NewBet
-  {
-    long mtype;
-    int bet_id;
-    int asset;
-    bool direction;
-    int deal_amount;
-    time_t timeframe;
-  };
-
-  struct BetStatus
-  {
-    long mtype;
-    int bet_id;
-    bool opening_result;
-  };
-
-  struct DealResult
-  {
-    long mtype;
-    int bet_id;
-    bool result; 
-    double balance_change;
-    double balance_result;
-  };
-  
-  struct PingConnection
-  {
-    long mtype;
-    int ping_const;
-  };
-
-  struct PingResult
-  {
-    long mtype;
-    bool ready_to_recieve;
-  };
-};
 
 class NeuroDealAction
 {
@@ -72,12 +21,12 @@ class NeuroDealAction
     int asset_deals_queue_fd;
     int new_bets_status_amount;
     int new_bets_result_amount;
-    int bets_status_recieved_num[2 * deals_namespace::MAX_DEALS_OPEN];
-    int bets_result_recieved_num[2 * deals_namespace::MAX_DEALS_OPEN];
+    int bets_status_recieved_num[2 * MAX_DEAL_AMOUNT];
+    int bets_result_recieved_num[2 * MAX_DEAL_AMOUNT];
 
-  	deals_namespace::NewBet bets_array[2 * deals_namespace::MAX_DEALS_OPEN];
-    deals_namespace::BetStatus bets_status_array[2 * deals_namespace::MAX_DEALS_OPEN];
-    deals_namespace::DealResult bets_results_array[2 * deals_namespace::MAX_DEALS_OPEN];
+  	deal_structs::NewDeal bets_array[2 * MAX_DEAL_AMOUNT];
+    deal_structs::DealStatus bets_status_array[2 * MAX_DEAL_AMOUNT];
+    deal_structs::DealResult bets_results_array[2 * MAX_DEAL_AMOUNT];
 
     std::string deals_queue_file_pathname;
 
@@ -101,9 +50,9 @@ class NeuroDealAction
 
     int update_deals();
 
-    int make_new_bet(const std::vector<deals_namespace::NewBet>& bets_vector);      //returns -1 if connection is not opened
+    int make_new_bet(const std::vector<deal_structs::NewDeal>& bets_vector);      //returns -1 if connection is not opened
 
-    const std::vector<deals_namespace::BetStatus>& get_updated_status();
+    const std::vector<deal_structs::DealStatus>& get_updated_status();
 
-    const std::vector<deals_namespace::DealResult>& get_updated_results();
+    const std::vector<deal_structs::DealResult>& get_updated_results();
 };

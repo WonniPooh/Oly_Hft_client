@@ -5,35 +5,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "SysStructs.h"
 #include "AssetNames.h"
-
-namespace assetstatus_namespace
-{
-  const int recive_mtype = 500;
-  const int MAX_USERNAME_LENGTH = 200;
-  const int status_changed_mtype = 2000;
-  const std::string status_queue_filename = "NEURO_ASSETS_STATUS";
-  const std::string asset_names_filename = "/all_assets.txt";
-
- struct ASSET_AVAILABLE
-  {
-    long mtype;
-    int asset;
-    bool available;
-  };
-
-  struct PingConnection
-  {
-    long mtype;
-    int accept_msgtype;
-  };
-
-  struct PingResult
-  {
-    long mtype;
-    bool ready_to_recieve;
-  };
-};
 
 //int* function();
 

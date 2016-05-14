@@ -2,14 +2,14 @@
 
 WinpercCommander::WinpercCommander()
 {
-  char current_username[winperc_namespace::MAX_USERNAME_LENGTH] = {};
-  getlogin_r(current_username, winperc_namespace::MAX_USERNAME_LENGTH);
+  char current_username[MAX_USERNAME_LENGTH] = {};
+  getlogin_r(current_username, MAX_USERNAME_LENGTH);
 
   asset_winperc_pathname_const = std::string("/home/") + std::string(current_username) + std::string("/"); 
-  status_queue_file_pathname =  asset_winperc_pathname_const + winperc_namespace::status_queue_filename;
+  status_queue_file_pathname =  asset_winperc_pathname_const + status_queue_filename;
 
-  std::string assets_file = std::string("/home/") + std::string(current_username) + asset_names_filename;
-  names.load_asset_names(&assets_file);
+  std::string assets_filepath = std::string("/home/") + std::string(current_username) + asset_names_filename;
+  names.load_asset_names(&assets_filepath);
   assets_amount = names.get_assets_amount();
 
   winperc_queue_fd = new int[assets_amount];
@@ -87,9 +87,9 @@ void WinpercCommander::init_winperc_queue()
 
 void WinpercCommander::send_winperc_ping_msg(int asset)
 {
-  winperc_namespace::PingConnection ping = {winperc_namespace::winperc_changed_mtype, winperc_namespace::recive_mtype};
+  ping_structs::PingConnection ping = {::WINPERC_COMMANDER_WINPERC_CHANGED_MTYPE, WINPERC_COMMANDER_PING_RESPONSE_MTYPE};
 
-  if(msgsnd(winperc_queue_fd[asset], (winperc_namespace::PingConnection*) &ping, sizeof(ping) - sizeof(long), 0) < 0)
+  if(msgsnd(winperc_queue_fd[asset], (::ping_structs::PingConnection*) &ping, sizeof(ping) - sizeof(long), 0) < 0)
   {
     printf("WinpercCommander::send_winperc_ping_msg of asset %s:: Can\'t send message to queue\n", names.get_asset_name(asset) -> c_str());
     perror("msgsnd");
@@ -100,11 +100,11 @@ void WinpercCommander::send_winperc_ping_msg(int asset)
 
 void WinpercCommander::recieve_winperc_ping_response(int asset)
 {
-  winperc_namespace::PingResult ping_result;
+  ::ping_structs::PingResult ping_result;
 
   if(!winperc_ping_success[asset])
   {
-    int rcv_result = msgrcv(winperc_queue_fd[asset], (winperc_namespace::PingResult*) &ping_result, sizeof(ping_result) - sizeof(long), winperc_namespace::recive_mtype, IPC_NOWAIT);
+    int rcv_result = msgrcv(winperc_queue_fd[asset], (::ping_structs::PingResult*) &ping_result, sizeof(ping_result) - sizeof(long), WINPERC_COMMANDER_PING_RESPONSE_MTYPE, IPC_NOWAIT);
 
     if (rcv_result < 0)
     {
@@ -124,7 +124,7 @@ void WinpercCommander::transmit_winperc_data()
 {
   int asset_to_update = 0;
   int new_winperc = winperc_update_needed_count;
-  winperc_namespace::ASSET_WINPERC post_data = {};
+  status_structs::AssetWinperc post_data = {};
 
   for(int i = 0; i < winperc_update_needed_count && asset_to_update < assets_amount; i++)
   {
@@ -142,9 +142,9 @@ void WinpercCommander::transmit_winperc_data()
     if(winperc_ping_success[asset_to_update])
     {
       post_data.winperc = current_status.winperc;
-      post_data.mtype = winperc_namespace::winperc_changed_mtype;
+      post_data.mtype = ::WINPERC_COMMANDER_WINPERC_CHANGED_MTYPE;
 
-      if(msgsnd(winperc_queue_fd[asset_to_update], (winperc_namespace::ASSET_WINPERC*) &post_data, sizeof(winperc_namespace::ASSET_WINPERC) - sizeof(long), 0) < 0)
+      if(msgsnd(winperc_queue_fd[asset_to_update], (status_structs::AssetWinperc*) &post_data, sizeof(status_structs::AssetWinperc) - sizeof(long), 0) < 0)
       {
         printf("Asset %s:: Can\'t send update asset winperc message to queue\n", names.get_asset_name(asset_to_update) -> c_str());
       }  
@@ -205,7 +205,7 @@ void WinpercCommander::transmit_availability()
 { 
   int asset_to_update = 0;
 
-  winperc_namespace::ASSET_AVAILABLE availability = {};
+  ::status_structs::AssetAvailable availability = {};
 
   for(int i = 0; i < status_update_needed_count && asset_to_update < assets_amount; i++)
   {
@@ -222,11 +222,11 @@ void WinpercCommander::transmit_availability()
 
     if(status_ping_success[asset_to_update])
     {
-      availability.mtype =  winperc_namespace::status_changed_mtype + asset_to_update;
+      availability.mtype = WINPERC_COMMANDER_STATUS_CHANGED_MTYPE + asset_to_update;
       availability.asset = asset_to_update;
       availability.available = asset_status[asset_to_update];
 
-      if(msgsnd(asset_status_queue_fd, (winperc_namespace::ASSET_AVAILABLE*) &availability, sizeof(winperc_namespace::ASSET_AVAILABLE) - sizeof(long), 0) < 0)
+      if(msgsnd(asset_status_queue_fd, (::status_structs::AssetAvailable*) &availability, sizeof(::status_structs::AssetAvailable) - sizeof(long), 0) < 0)
       {
         printf("Asset %s:: Can\'t send update asset status message to queue\n", names.get_asset_name(asset_to_update) -> c_str());
       }  
@@ -259,9 +259,9 @@ void WinpercCommander::send_status_ping_msg()
 {
   for(int i = 0; i < assets_amount; i++)
   {
-    winperc_namespace::PingConnection ping = {winperc_namespace::status_changed_mtype + i, winperc_namespace::recive_mtype + i};
+    ping_structs::PingConnection ping = {WINPERC_COMMANDER_STATUS_CHANGED_MTYPE + i, WINPERC_COMMANDER_PING_RESPONSE_MTYPE + i};
 
-    if(msgsnd(asset_status_queue_fd, (winperc_namespace::PingConnection*) &ping, sizeof(ping) - sizeof(long), 0) < 0)
+    if(msgsnd(asset_status_queue_fd, (ping_structs::PingConnection*) &ping, sizeof(ping) - sizeof(long), 0) < 0)
     {
       printf("WinpercCommander::send_status_ping_msg of asset %s:: Can\'t send message to queue\n", names.get_asset_name(i) -> c_str());
       perror("msgsnd");
@@ -273,11 +273,11 @@ void WinpercCommander::send_status_ping_msg()
 
 void WinpercCommander::recieve_status_ping_response(int asset)
 {
-  winperc_namespace::PingResult ping_result;
+  ::ping_structs::PingResult ping_result;
 
   if(!status_ping_success[asset])
   {
-    int rcv_result = msgrcv(asset_status_queue_fd, (winperc_namespace::PingResult*) &ping_result, sizeof(ping_result) - sizeof(long), winperc_namespace::recive_mtype + asset, IPC_NOWAIT);
+    int rcv_result = msgrcv(asset_status_queue_fd, (::ping_structs::PingResult*) &ping_result, sizeof(ping_result) - sizeof(long), WINPERC_COMMANDER_PING_RESPONSE_MTYPE + asset, IPC_NOWAIT);
 
     if (rcv_result < 0)
     {

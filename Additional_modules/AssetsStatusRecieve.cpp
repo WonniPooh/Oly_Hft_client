@@ -7,13 +7,13 @@ AssetsStatusRecieve::AssetsStatusRecieve()
   asset_availability = 0;
   asset_status_queue_fd = 0;
 
-  char current_username[assetstatus_namespace::MAX_USERNAME_LENGTH] = {};
-  getlogin_r(current_username, assetstatus_namespace::MAX_USERNAME_LENGTH);
+  char current_username[MAX_USERNAME_LENGTH] = {};
+  getlogin_r(current_username, MAX_USERNAME_LENGTH);
 
-  status_queue_file_pathname =  std::string("/home/") + std::string(current_username) + std::string("/") + assetstatus_namespace::status_queue_filename;
+  status_queue_file_pathname =  std::string("/home/") + std::string(current_username) + std::string("/") + status_queue_filename;
 
-  std::string assets_file = std::string("/home/") + std::string(current_username) + assetstatus_namespace::asset_names_filename;
-  names.load_asset_names(&assets_file);
+  std::string assets_filepath = std::string("/home/") + std::string(current_username) + asset_names_filename;
+  names.load_asset_names(&assets_filepath);
   assets_amount = names.get_assets_amount();
 }
 
@@ -45,9 +45,9 @@ void AssetsStatusRecieve::close_status_queue()
 
 void AssetsStatusRecieve::ping_connection()
 {
-  assetstatus_namespace::PingConnection recieved_ping = {};
+  ping_structs::PingConnection recieved_ping = {};
 
-  int rcv_result = msgrcv(asset_status_queue_fd, (assetstatus_namespace::PingConnection*) &recieved_ping, sizeof(recieved_ping) - sizeof(long), assetstatus_namespace::status_changed_mtype + asset, IPC_NOWAIT);
+  int rcv_result = msgrcv(asset_status_queue_fd, (ping_structs::PingConnection*) &recieved_ping, sizeof(recieved_ping) - sizeof(long), WINPERC_COMMANDER_STATUS_CHANGED_MTYPE + asset, IPC_NOWAIT);
 
   if (rcv_result < 0)
   {
@@ -59,11 +59,11 @@ void AssetsStatusRecieve::ping_connection()
     ping_recieved = 1;
     printf("AssetsStatusRecieve::ping connection::ping msg successfully recieved\n");    
 
-    assetstatus_namespace::PingResult ping = {};
-    ping.mtype = recieved_ping.accept_msgtype;
+    ping_structs::PingResult ping = {};
+    ping.mtype = recieved_ping.ping_data;
     ping.ready_to_recieve  = 1;
 
-    if(msgsnd(asset_status_queue_fd, (assetstatus_namespace::PingResult*) &ping, sizeof(ping) - sizeof(long), 0) < 0)
+    if(msgsnd(asset_status_queue_fd, (ping_structs::PingResult*) &ping, sizeof(ping) - sizeof(long), 0) < 0)
     {
       printf("AssetsStatusRecieve::Can\'t respond to ping message\n");
     }  
@@ -72,7 +72,7 @@ void AssetsStatusRecieve::ping_connection()
 
 void AssetsStatusRecieve::update_availability()
 {
-  assetstatus_namespace::ASSET_AVAILABLE availability;
+  status_structs::AssetAvailable availability;
 
   if(asset == -1)
   {
@@ -87,7 +87,7 @@ void AssetsStatusRecieve::update_availability()
   {
     availability = {};
 
-    int rcv_result = msgrcv(asset_status_queue_fd, (assetstatus_namespace::ASSET_AVAILABLE*) &availability, sizeof(availability) - sizeof(long), assetstatus_namespace::status_changed_mtype + asset, IPC_NOWAIT);
+    int rcv_result = msgrcv(asset_status_queue_fd, (status_structs::AssetAvailable*) &availability, sizeof(availability) - sizeof(long), WINPERC_COMMANDER_STATUS_CHANGED_MTYPE + asset, IPC_NOWAIT);
 
     if (rcv_result < 0)
     {

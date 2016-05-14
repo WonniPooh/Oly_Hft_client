@@ -1,9 +1,9 @@
-*/
+/*
  * libwebsockets-client
  *
  * Copyright (C) 2016 Alex Serbin
  *
- * g++ working.cpp OlymptradeWsClient.cpp EstablishConnection.cpp ConnectionData.cpp StatisticsFileSystem.cpp ParseCmdArgs.cpp json11/json11.cpp -L/usr/local/lib -lwebsockets -pthread -g -std=c++11
+ * g++ working.cpp OlymptradeWsClient.cpp EstablishConnection.cpp ConnectionData.cpp StatisticsFileSystem.cpp ParseCmdArgs.cpp AssetNames.cpp json11/json11.cpp -L/usr/local/lib -lwebsockets -pthread -g -std=c++11
  */
 
 #include <stdlib.h>
@@ -14,6 +14,7 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 
+#include "SysStructs.h"
 #include "AssetNames.h"
 #include "ParseCmdArgs.h"
 #include "OlymptradeWsClient.h"
@@ -24,20 +25,9 @@ enum
   ESTABLISH_CONNECTION
 };
 
-typedef struct MsgBufWsCreateNewConnectio
-{
-  long msgtyp;
-  int action;
-  int asset;
-} ws_msg_buf_t;
-
-const std::string RECORDS_FILENAME = "/Creation_data";
-const int MAX_PROGRAMM_PATH_LEN = 500;
-int ASSETS_AMOUNT = 0;                                   //txlib -> examples ldview -- graph algorithms doxygen help + dynamic array for using threads;
-const int MAX_USERNAME_LENGTH = 200;
+const int MAX_PROGRAMM_PATH_LEN = 500;                    //doxygen.org -> manual   txlib -> help in every function + tx/doc files
+int ASSETS_AMOUNT = 0;                                    //txlib -> examples ldview -- graph algorithms doxygen help + dynamic array for using threads;
                                         
-static std::string RECORDS_FILEPATH;                            //doxygen.org -> manual   txlib -> help in every function + tx/doc files
-
 void delete_queue(int msgid);
 int queue_get_access(const std::string& pathname_to_use);
 
@@ -53,50 +43,31 @@ int main(int argc, char **argv)
 {
   printf("Main process id is %d\n", getpid());
 
-  struct PingConnection
-  {
-    long mtype;
-    int accept_msgtype;
-  };
+  ping_structs::PingConnection ping = {};
+  ping_structs::PingResult ping_response = {};
 
-  struct PingResult
-  {
-    long mtype;
-    bool ready_to_recieve;
-  };
+  char current_username[MAX_USERNAME_LENGTH] = {};
+  getlogin_r(current_username, MAX_USERNAME_LENGTH);
+  std::string assets_filepath = std::string("/home/") + std::string(current_username) + asset_names_filename;
 
-  PingConnection ping = {};
-  PingResult ping_response = {};
-
-  char* getcwd_result_ptr = getcwd(NULL, MAX_PROGRAMM_PATH_LEN);
-
-  RECORDS_FILEPATH = getcwd_result_ptr + RECORDS_FILENAME;
-
-  free(getcwd_result_ptr);
+  std::string ws_queue_pathname = "/home/" + std::string(current_username) + ws_queue_filename; //+ "/WS_CLIENT_ASSET_STATUS";
+  FILE* temp = fopen(ws_queue_pathname.c_str(), "a+");
+  fclose(temp);
+  int ws_command_queue_fd = queue_get_access(ws_queue_pathname);
 
   AssetNames names_class;
-  names_class.load_asset_names(&RECORDS_FILEPATH);
+  names_class.load_asset_names(&assets_filepath);
   ASSETS_AMOUNT = names_class.get_assets_amount();
-
 
   pid_t pid = 1;
   pid_t* processes_running = new pid_t[ASSETS_AMOUNT];
-  char current_username[MAX_USERNAME_LENGTH] = {};
-  getlogin_r(current_username, MAX_USERNAME_LENGTH);
-  std::string QUEUE_PATHNAME = "/home/" + std::string(current_username) + "/WS_CLIENT_ASSET_STATUS";
-
-  FILE* temp = fopen(QUEUE_PATHNAME.c_str(), "a+");
-
-  fclose(temp);
-
-  int ws_command_queue_fd = queue_get_access(QUEUE_PATHNAME);
        
-  ws_msg_buf_t recieved_cmd = {};
+  MsgBufWsCreateNewConnection recieved_cmd = {};
 
   main_sighandler(0, NULL, (void*)&ws_command_queue_fd);
   set_main_sigint_handler();
    
-  if((msgrcv(ws_command_queue_fd, (PingConnection*) &ping, sizeof(PingConnection) - sizeof(long), 0, 0)) < 0)
+  if((msgrcv(ws_command_queue_fd, (ping_structs::PingConnection*) &ping, sizeof(ping_structs::PingConnection) - sizeof(long), 0, 0)) < 0)
   {
     printf("Can\'t receive ping message from queue\n");
     delete_queue(ws_command_queue_fd);
@@ -104,11 +75,11 @@ int main(int argc, char **argv)
   }
 
   ping_response.ready_to_recieve = 1;
-  ping_response.mtype = ping.accept_msgtype;
+  ping_response.mtype = ping.ping_data;
 
-  printf("ping response type:: %d\n", ping.accept_msgtype);
+  printf("ping response type:: %d\n", ping.ping_data);
   
-  if(msgsnd(ws_command_queue_fd, (PingResult*) &ping_response, sizeof(PingResult) - sizeof(long), 0) < 0)
+  if(msgsnd(ws_command_queue_fd, (ping_structs::PingResult*) &ping_response, sizeof(ping_structs::PingResult) - sizeof(long), 0) < 0)
   {
     printf("Can\'t send ping_response to queue\n");
     perror("msgsnd");
@@ -118,7 +89,7 @@ int main(int argc, char **argv)
 
   while(1)
   {   
-    if((msgrcv(ws_command_queue_fd, (ws_msg_buf_t*) &recieved_cmd, sizeof(ws_msg_buf_t) - sizeof(long), ping.mtype, 0)) < 0)
+    if((msgrcv(ws_command_queue_fd, (MsgBufWsCreateNewConnection*) &recieved_cmd, sizeof(MsgBufWsCreateNewConnection) - sizeof(long), ping.mtype, 0)) < 0)
     {
       printf("Can\'t receive message from queue\n");
       delete_queue(ws_command_queue_fd);
@@ -148,7 +119,7 @@ int main(int argc, char **argv)
           child_sighandler(0, NULL, (void*)&olymp_client);
           set_child_sigint_handler();
 
-          olymp_client.run_client(RECORDS_FILEPATH, recieved_cmd.asset, names_class.get_asset_name(recieved_cmd.asset), ws_command_queue_fd);
+          olymp_client.run_client(assets_filepath, recieved_cmd.asset, names_class.get_asset_name(recieved_cmd.asset), ws_command_queue_fd);
 
           break;
         }

@@ -14,6 +14,7 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <inttypes.h>
+#include "SysStructs.h"
 #include "WinpercCommander.h"
 #include "WsClientCommander.h"
 #include "CurlOlymptradeActions.h"
@@ -47,7 +48,7 @@ int main()
 
   wait_time_left_before_next_update();
 
-  std::vector<deals_namespace::NewBet> bet_props;
+  std::vector<deal_structs::NewDeal> bet_props;
 
   while(1)
   {
@@ -65,23 +66,23 @@ int main()
 
 void wait_time_left_before_next_update()
 {
-    unsigned int sec_in_nano = 1000000000;
+  unsigned int sec_in_nano = 1000000000;
 
-    unsigned int update_sec_part = 700000000;
+  unsigned int update_sec_part = 700000000;
 
-    struct timespec spec;
-    long current_second_nano_part;
+  struct timespec spec;
+  long current_second_nano_part;
 
-    clock_gettime(CLOCK_REALTIME, &spec);
+  clock_gettime(CLOCK_REALTIME, &spec);
 
-    current_second_nano_part = spec.tv_nsec; // Convert nanoseconds to milliseconds
+  current_second_nano_part = spec.tv_nsec; // Convert nanoseconds to milliseconds
 
-    if(current_second_nano_part > update_sec_part)
-    {
-      usleep((sec_in_nano + update_sec_part - current_second_nano_part) / 1000);
-    }
-    else
-      usleep((update_sec_part - current_second_nano_part) / 1000);
+  if(current_second_nano_part > update_sec_part)
+  {
+    usleep((sec_in_nano + update_sec_part - current_second_nano_part) / 1000);
+  }
+  else
+    usleep((update_sec_part - current_second_nano_part) / 1000);
 }
 
 size_t recieved_data_process(char *response_data, size_t size, size_t nmemb, void *user_func_args)

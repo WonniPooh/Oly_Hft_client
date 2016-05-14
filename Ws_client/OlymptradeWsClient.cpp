@@ -1,7 +1,14 @@
 #include "OlymptradeWsClient.h"
 
-static const int MAX_USERNAME_LENGTH  = 200;
-const int ASSETS_AMOUNT = 18;
+static const int MAX_SERVER_RESPOND_LENGTH = 200;             
+static const int MAX_SERVER_REQUEST_LEN = 500;                
+
+struct PthreadRoutineStruct 
+{
+  char first_server_request[MAX_SERVER_REQUEST_LEN];
+  bool is_there_first_request;
+  void* olymptrade_pointer;
+};
 
 int ws_service_callback(struct lws* wsi_pointer,
                         enum lws_callback_reasons reason, 
@@ -107,11 +114,11 @@ void OlymptradeWsClient::open_queue_connection()
     return;
   }
 
-  PingConnection ping = {};
-  ping.mtype = WSCLIENT_MSG_TYPE;
-  ping.asset = current_asset_number;
+  ping_structs::PingConnection ping = {};
+  ping.mtype = WSCLIENT_QUOTE_MTYPE;
+  ping.ping_data = current_asset_number;
 
-  if(msgsnd(queue_fd, (PingConnection*) &ping, sizeof(PingConnection) - sizeof(long), 0) < 0)
+  if(msgsnd(queue_fd, (ping_structs::PingConnection*) &ping, sizeof(ping_structs::PingConnection) - sizeof(long), 0) < 0)
   {
     printf("process %d asset %s  OlymptradeWsClient::open_queue_connection::Can\'t send message to queue\n", getpid(), current_asset_name -> c_str());
     perror("msgsnd");
@@ -122,9 +129,9 @@ void OlymptradeWsClient::transmit_data(uint64_t current_timestamp, double price_
 {
   if(!queue_connection_eastablished)
   {
-    PingSuccess test_success = {};
+    ping_structs::PingConnection ping_success = {};
 
-    int rcv_result = msgrcv(queue_fd, (PingSuccess*) &test_success, sizeof(test_success) - sizeof(long), WSCLIENT_MSG_RCV, IPC_NOWAIT);
+    int rcv_result = msgrcv(queue_fd, (ping_structs::PingConnection*) &ping_success, sizeof(ping_success) - sizeof(long), WSCLIENT_PING_MSG_RESPONSE, IPC_NOWAIT);
 
     if (rcv_result < 0)
     {
@@ -143,12 +150,12 @@ void OlymptradeWsClient::transmit_data(uint64_t current_timestamp, double price_
 
   if(queue_connection_eastablished)
   {
-    SendData post_data = {};
-    post_data.mtype = WSCLIENT_MSG_TYPE;
+    NewQuoteMsg post_data = {};
+    post_data.mtype = WSCLIENT_QUOTE_MTYPE;
     post_data.timestamp = current_timestamp;
     post_data.close = price_close;
 
-    if(msgsnd(queue_fd, (SendData*) &post_data, sizeof(SendData) - sizeof(long), 0) < 0)
+    if(msgsnd(queue_fd, (NewQuoteMsg*) &post_data, sizeof(NewQuoteMsg) - sizeof(long), 0) < 0)
     {
       printf("process %d asset %s:: Can\'t send message to queue\n", getpid(), current_asset_name -> c_str());
     }

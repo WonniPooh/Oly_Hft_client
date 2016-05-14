@@ -3,42 +3,9 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <unistd.h>
+#include "SysStructs.h"
 #include "AssetNames.h"
 #include "ParseOlymptradeJSON.h"
-
-namespace winperc_namespace
-{
-  const int MAX_USERNAME_LENGTH = 200;
-  const int recive_mtype = 500;
-  const int status_changed_mtype = 2000;
-  const int winperc_changed_mtype = 1000;
-  const std::string status_queue_filename = "NEURO_ASSETS_STATUS";
-
-  struct ASSET_AVAILABLE
-  {
-    long mtype;
-    int asset;
-    bool available;
-  };
-
-  struct ASSET_WINPERC
-  {
-    long mtype;
-    uint16_t winperc;
-  };
-
-  struct PingConnection
-  {
-    long mtype;
-    int accept_msgtype;
-  };
-
-  struct PingResult
-  {
-    long mtype;
-    bool ready_to_recieve;
-  };
-};
 
 class WinpercCommander
 {

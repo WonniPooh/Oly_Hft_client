@@ -5,9 +5,9 @@
 
 void OlyClientDealService::get_ping_msg()
 {
-  deals_namespace::PingConnection ping = {};
+  ping_structs::PingConnection ping = {};
 
-  int rcv_result = msgrcv(asset_deals_queue_fd, (deals_namespace::PingConnection*) &ping, sizeof(ping) - sizeof(long), deals_namespace::PING_CONSTANT, IPC_NOWAIT);
+  int rcv_result = msgrcv(asset_deals_queue_fd, (ping_structs::PingConnection*) &ping, sizeof(ping) - sizeof(long), DEAL_SERVICE_PING_MTYPE, IPC_NOWAIT);
 
   if (rcv_result < 0)
   {
@@ -24,9 +24,9 @@ void OlyClientDealService::get_ping_msg()
 
 void OlyClientDealService::response_ping_msg()
 {
-  deals_namespace::PingResult ping_result = {deals_namespace::PING_RESPONSE_CONSTANT, 1};
+  ping_structs::PingResult ping_result = {DEAL_SERVICE_RESPONCE_PING_MTYPE, 1};
 
-  if(msgsnd(asset_deals_queue_fd, (deals_namespace::PingResult*) &ping_result, sizeof(deals_namespace::PingResult) - sizeof(long), 0) < 0)
+  if(msgsnd(asset_deals_queue_fd, (ping_structs::PingResult*) &ping_result, sizeof(ping_structs::PingResult) - sizeof(long), 0) < 0)
   {
     printf("OlyClientDealService::Can\'t send ping_result message to queue\n");
     perror("msgsnd");
@@ -69,9 +69,9 @@ void OlyClientDealService::close_deals_queue()
 //-----------------------------------------------------------------------------------------------
 
 
-std::vector<deals_namespace::NewBet> OlyClientDealService::get_new_bets()
+std::vector<deal_structs::NewDeal> OlyClientDealService::get_new_bets()
 {
-  std::vector<deals_namespace::NewBet> bets_to_return;
+  std::vector<deal_structs::NewDeal> bets_to_return;
 
   if(!free_bet_array_positions_amount)
   {
@@ -92,7 +92,7 @@ std::vector<deals_namespace::NewBet> OlyClientDealService::get_new_bets()
   std::vector<int> free_positions;
   int places_used = 0;
 
-  for(int i = 0; i < deals_namespace::MAX_DEALS_OPEN; i++)
+  for(int i = 0; i < MAX_DEAL_AMOUNT; i++)
   {
     if(!bets_array[i].bet_id)
       free_positions.push_back(i);
@@ -100,7 +100,7 @@ std::vector<deals_namespace::NewBet> OlyClientDealService::get_new_bets()
 
   for(int i = 0; i < current_free_positions_amount; i++)
   {
-    int rcv_result = msgrcv(asset_deals_queue_fd, (deals_namespace::NewBet*) &bets_array[free_positions[i]], sizeof(deals_namespace::NewBet) - sizeof(long), deals_namespace::NEW_DEAL_MTYPE, IPC_NOWAIT);
+    int rcv_result = msgrcv(asset_deals_queue_fd, (deal_structs::NewDeal*) &bets_array[free_positions[i]], sizeof(deal_structs::NewDeal) - sizeof(long), NEW_DEAL_MTYPE, IPC_NOWAIT);
 
     if (rcv_result < 0)
     {
@@ -137,13 +137,13 @@ void OlyClientDealService::set_deals_status_json_handler(ParseOlymptradeJSON* de
 //-----------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------
 
-void OlyClientDealService::send_deal_status(deals_namespace::BetStatus* bet_status)
+void OlyClientDealService::send_deal_status(deal_structs::DealStatus* bet_status)
 {
   assert(bet_status);
 
-  bet_status -> mtype = deals_namespace::DEAL_STATUS_MTYPE;
+  bet_status -> mtype = DEAL_STATUS_MTYPE;
 
-  if(msgsnd(asset_deals_queue_fd, (deals_namespace::BetStatus*) bet_status, sizeof(deals_namespace::BetStatus) - sizeof(long), 0) < 0)
+  if(msgsnd(asset_deals_queue_fd, (deal_structs::DealStatus*) bet_status, sizeof(deal_structs::DealStatus) - sizeof(long), 0) < 0)
   {
     printf("OlyClientDealService::Can\'t send %d deal result message to queue\n", bet_status -> bet_id);
     perror("msgsnd");
@@ -152,13 +152,13 @@ void OlyClientDealService::send_deal_status(deals_namespace::BetStatus* bet_stat
     printf("OlyClientDealService::Deal %d result msg successfully sent\n", bet_status -> bet_id);
 }
 
-void OlyClientDealService::send_deal_result(deals_namespace::DealResult* deal_result)
+void OlyClientDealService::send_deal_result(deal_structs::DealResult* deal_result)
 {
   assert(deal_result);
 
-  deal_result -> mtype = deals_namespace::DEAL_RESULTS_MTYPE;
+  deal_result -> mtype = DEAL_RESULTS_MTYPE;
 
-  if(msgsnd(asset_deals_queue_fd, (deals_namespace::DealResult*) deal_result, sizeof(deals_namespace::DealResult) - sizeof(long), 0) < 0)
+  if(msgsnd(asset_deals_queue_fd, (deal_structs::DealResult*) deal_result, sizeof(deal_structs::DealResult) - sizeof(long), 0) < 0)
   {
     printf("OlyClientDealService::Can\'t send %d deal result message to queue\n", deal_result -> bet_id);
     perror("msgsnd");
@@ -175,20 +175,20 @@ OlyClientDealService::OlyClientDealService()
   parsed_deals_status = NULL;
   ping_success = 0;
   asset_deals_queue_fd = 0;
-  free_bet_array_positions_amount = deals_namespace::MAX_DEALS_OPEN;
+  free_bet_array_positions_amount = MAX_DEAL_AMOUNT;
   
-  char current_username[deals_namespace::MAX_USERNAME_LENGTH] = {};
-  getlogin_r(current_username, deals_namespace::MAX_USERNAME_LENGTH);
+  char current_username[MAX_USERNAME_LENGTH] = {};
+  getlogin_r(current_username, MAX_USERNAME_LENGTH);
 
   deals_queue_file_pathname =  std::string("/home/") + std::string(current_username) + std::string("/NEURO_DEAL_ACTIONS");
 
   open_deals_queue();
 
-  std::string assets_file = std::string("/home/") + std::string(current_username) + deals_namespace::asset_names_filename;
-  names.load_asset_names(&assets_file);
+  std::string assets_filepath = std::string("/home/") + std::string(current_username) + asset_names_filename;
+  names.load_asset_names(&assets_filepath);
   assets_amount = names.get_assets_amount();
 
-  for(int i = 0; i < deals_namespace::MAX_DEALS_OPEN; i++)
+  for(int i = 0; i < MAX_DEAL_AMOUNT; i++)
   {
     bets_array[i] = {};
     bet_status_recieved[i] = 0;
@@ -215,7 +215,7 @@ void OlyClientDealService::service_deal_status()
       else
       {
         bet_status_recieved[bet_num] = true;
-        deals_namespace::BetStatus current_bet_status = {deals_namespace::DEAL_STATUS_MTYPE, bets_array[bet_num].bet_id, deal_to_serve.result};
+        deal_structs::DealStatus current_bet_status = {DEAL_STATUS_MTYPE, bets_array[bet_num].bet_id, deal_to_serve.result};
         send_deal_status(&current_bet_status);
         deals_status_served++;
       }
@@ -224,11 +224,11 @@ void OlyClientDealService::service_deal_status()
 
   for(int i = 0; i < new_status_amount - deals_status_served; i++)
   {
-    for(int i = 0; i < deals_namespace::MAX_DEALS_OPEN; i++)
+    for(int i = 0; i < MAX_DEAL_AMOUNT; i++)
     {
       if(bets_array[i].bet_id && !bet_status_recieved[i])
       {
-        deals_namespace::BetStatus current_bet_status = {deals_namespace::DEAL_STATUS_MTYPE, bets_array[i].bet_id, false};
+        deal_structs::DealStatus current_bet_status = {DEAL_STATUS_MTYPE, bets_array[i].bet_id, false};
         send_deal_status(&current_bet_status);
         bets_array[i] = {};
         free_bet_array_positions_amount++;
@@ -247,7 +247,7 @@ int OlyClientDealService::define_bet_id(const AssetDeal* deal_to_serve)
     return -1;
   }
 
-  for(int i = 0; i < deals_namespace::MAX_DEALS_OPEN; i++)
+  for(int i = 0; i < MAX_DEAL_AMOUNT; i++)
   {
     if(bets_array[i].asset == asset && bets_array[i].deal_amount == deal_to_serve -> amount && bets_array[i].direction == deal_to_serve -> direction)
     {
@@ -276,7 +276,7 @@ void OlyClientDealService::update_deals(ParseOlymptradeJSON* parsed_data)
   static int first_time_called = 1;
   static int prev_top_deal_id = 0;
   static int current_deal_id = 0;
-  deals_namespace::DealResult deal_result_to_send = {};
+  deal_structs::DealResult deal_result_to_send = {};
   const AssetDeal* serviced_deal = NULL;
   int while_cycle_counter = 0;
   int bet_array_position = 0;
@@ -307,14 +307,14 @@ void OlyClientDealService::update_deals(ParseOlymptradeJSON* parsed_data)
 
       for(int i = 0; i < 2; i++)
       {
-        if(serviced_deal -> status == deals_namespace::bets_result_status[i])
+        if(serviced_deal -> status == bets_result_status[i])
         {
           deal_result = i;
           break;
         }
       }
 
-      deal_result_to_send = {deals_namespace::DEAL_RESULTS_MTYPE, bets_array[bet_array_position].bet_id, 
+      deal_result_to_send = {DEAL_RESULTS_MTYPE, bets_array[bet_array_position].bet_id, 
                              deal_result, serviced_deal -> balance_change, serviced_deal -> balance_result};
       send_deal_result(&deal_result_to_send);
       bets_array[bet_array_position] = {};
